@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "obelisk",
-  "branch": "master",
+  "branch": "so-nervos-fix",
   "private": false,
-  "rev": "e7ccc91806b94b424b086bf75087a0a5fd3ff0b5",
-  "sha256": "1xmfz5ck3bg7daxmalvzr4a58zmfrsp1h6y5zcii9ccxqmf3xl6g"
+  "rev": "9350229aa5fe53145bed6cf9197062dfeb452965",
+  "sha256": "0awpf1rwm6j78qnw21md8djrzi8017gh8vhvfj4kl6fdf7c3l0fw"
 }
