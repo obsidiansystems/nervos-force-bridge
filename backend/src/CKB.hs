@@ -65,7 +65,9 @@ account = do
     testnet = addr "testnet"
 
 -- We pipe in a temporary file as Stdin to be able to provide a password to the create account utility
-createNewAccount :: MonadIO m => m Account
+
+
+{-createNewAccount :: MonadIO m => m Account
 createNewAccount = liftIO $ do
   d <- readProcess ckbCliPath ["account", "new"] input
   let Done _ a = parse account . T.pack $ d
@@ -73,6 +75,7 @@ createNewAccount = liftIO $ do
   where
     pass = "hello"
     input = intercalate "\n" [pass, pass]
+-}
 
   {-liftIO $ withTempFile "." "password" $ \_ handle -> do
   hPutStr handle "hello"
@@ -99,12 +102,13 @@ createNewAccount = liftIO $ do
       Nothing
       Nothing
       False
--}
+
 ckbPath :: FilePath
 ckbPath = $(staticWhich "ckb")
 
 ckbCliPath :: FilePath
 ckbCliPath = $(staticWhich "ckb-cli")
+
 
 -- TODO(skylar): This fails if certain files already exist
 initDevChain :: (MonadIO m) => FilePath -> Bool -> m ()
@@ -134,10 +138,10 @@ initDevChain path force = liftIO $ do
       Nothing
       Nothing
       False
-
+-}
 runDevelopmentChain :: MonadIO m => FilePath -> m ()
 runDevelopmentChain directory = liftIO $ do
-  createDirectoryIfMissing False directory
+  -- createDirectoryIfMissing False directory
   -- TODO(skylar): Can we just detect if this should be forced, and avoid creating this everytime?
-  initDevChain directory True
+  -- initDevChain directory True
   pure ()
