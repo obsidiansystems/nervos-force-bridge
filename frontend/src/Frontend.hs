@@ -139,12 +139,11 @@ frontend = Frontend
               elClass "div" "border rounded-lg p-4 mb-4" $ do
                 elClass "div" "text-bold" $ text "input address"
                 ie <- inputElement $ def
-                  & initialAttributes .~ ("placeholder" =: "0.0"
+                  & initialAttributes .~ ("placeholder" =: "enter your ckb address"
                                         <> "class" =: "focus:outline-none text-gray-700"
                                        )
                 let
                   value = _inputElement_value ie
-                display $ T.reverse <$> value
                 pure ()
 
               let

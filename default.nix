@@ -20,6 +20,7 @@ let
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
 
   ckb = import sources.ckb {};
+  ckb-cli = import sources.ckb-cli {};
 
 in project ./. ({ pkgs, ... }: {
   android.applicationId = "systems.obsidian.obelisk.examples.minimal";
@@ -27,5 +28,5 @@ in project ./. ({ pkgs, ... }: {
   ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
   ios.bundleName = "Obelisk Minimal Example";
 
-  tools = _: [ pkgs.git ckb pkgs.coreutils ];
+  tools = _: [ pkgs.git ckb ckb-cli pkgs.coreutils ];
 })

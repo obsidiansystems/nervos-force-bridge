@@ -23,7 +23,7 @@ import CKB
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      runDevelopmentChain "ckb"
+      -- runDevelopmentChain "ckb"
       -- ckbInitDev
       -- flip runLoggingT (print . renderWithSeverity id) $ do
       -- logMessage $ WithSeverity Informational (pretty gitPath)

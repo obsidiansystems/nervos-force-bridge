@@ -23,6 +23,7 @@ library
     Frontend
   other-modules:
     Nami
+    Promise
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
 
 executable frontend

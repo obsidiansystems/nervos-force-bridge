@@ -68,15 +68,12 @@ getBalance :: MonadJSM m => NamiApi -> m Double
 getBalance napi = liftJSM $ do
   promise <- napi ^. js0 "getBalance"
   x <- promiseMaybe (unsafeToPromise promise) (fromJSValUnchecked)
-  -- x <- promiseMaybe (unsafeToPromise promise) (fromJSValUnchecked)
   case x of
     Nothing -> pure 0
     Just (j :: T.Text) -> pure $ fromIntegral val / 1000000
       where
         val :: Natural
         val = deserialise $ LBS.fromStrict $ toBytes $ hexString $ encodeUtf8 j
-    -- LBS.fromStrict $ encodeUtf8 x
-      -- pure $ deserialise $ LBS.toStrict x
 
 getUsedAddress :: (MonadJSM m) => NamiApi -> m (Maybe Address)
 getUsedAddress napi = liftJSM $ do
@@ -93,7 +90,6 @@ getUsedAddress napi = liftJSM $ do
       case results of
         [addr] -> pure $ Just addr
         _ -> pure Nothing
-
 
 signTest :: MonadJSM m => NamiApi -> Address -> m ()
 signTest napi addr = liftJSM $ do
