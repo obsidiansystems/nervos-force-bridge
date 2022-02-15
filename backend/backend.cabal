@@ -20,6 +20,8 @@ library
                , attoparsec
                , temporary
                , tomland
+               , text
+               , obelisk-executable-config-lookup
   exposed-modules:
     Backend
   other-modules:
