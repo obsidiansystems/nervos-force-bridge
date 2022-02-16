@@ -130,7 +130,7 @@ mkBlockAssembler :: Account -> BlockAssembler
 mkBlockAssembler a =
   BlockAssembler
   magicHash
-  (lock_hash a)
+  (lock_arg a)
   alwaysHashType
   -- TODO(skylar): What is message for?
   "0x"
@@ -221,6 +221,7 @@ ckbCliPath :: FilePath
 ckbCliPath = $(staticWhich "ckb-cli")
 
 -- TODO(skylar): This fails if certain files already exist
+-- Force doesn't actually delete all the things it should :(
 initDevChain :: (MonadIO m) => FilePath -> Bool -> m ()
 initDevChain path force = liftIO $ do
   -- cfgs <- Lookup.getConfigs
@@ -255,7 +256,13 @@ initDevChain path force = liftIO $ do
     -- TODO(skylar): This can just be a shell or proc instead of doing this by hand
     cp =
       CreateProcess
-      (ShellCommand $ intercalate " " [ckbPath, "init", "--chain", "dev", bool "" "--force" force])
+      (ShellCommand $
+       intercalate " " [ ckbPath
+                       , "init"
+                       , "--chain"
+                       , "dev"
+                       , bool "" "--force" force
+                       ])
       (Just path)
       Nothing
       Inherit
@@ -273,6 +280,10 @@ initDevChain path force = liftIO $ do
 
 runDevelopmentChain :: MonadIO m => FilePath -> m ()
 runDevelopmentChain directory = liftIO $ do
+  exists <- doesDirectoryExist directory
+  case exists of
+    False -> pure ()
+    True -> removePathForcibly directory
   createDirectoryIfMissing False directory
   -- TODO(skylar): Can we just detect if this should be forced, and avoid creating this everytime?
   initDevChain directory True
