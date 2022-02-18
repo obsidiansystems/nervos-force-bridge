@@ -14,10 +14,10 @@ import System.IO (print)
 import Control.Monad.Log
 import Control.Monad.IO.Class (liftIO, MonadIO)
 
+import Cardano.Binary
+
 import Prettyprinter (pretty)
-
 import Data.Text as T
-
 import CKB
 
 backend :: Backend BackendRoute FrontendRoute

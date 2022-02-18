@@ -1,0 +1,8 @@
+{
+  "url": "ssh://git@code.obsidian.systems/lodewallet/browser-extension",
+  "rev": "aae2899be43e33cfefd072f3d6e4151cd55cf2ac",
+  "sha256": "1c3z9vbifvh1q2p1r7kdrqri2hsc33n1vvqqmrfjqff1h7kqnzhi",
+  "private": true,
+  "fetchSubmodules": false,
+  "branch": "ll/add-popupid-JSONKey-instances"
+}

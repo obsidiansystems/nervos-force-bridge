@@ -19,26 +19,101 @@ let
   nix-thunk = import ./deps/nix-thunk {};
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
 
+  foldExtensions = lib.foldr lib.composeExtensions (_: _: {});
+
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
+  pkgs = obelisk.pkgs;
 
-in project ./. ({ pkgs, ... }: {
+in project ./. ({ pkgs, ... }: let
+  haskellLib = pkgs.haskell.lib;
+in with pkgs.haskell.lib; {
   android.applicationId = "systems.obsidian.obelisk.examples.minimal";
   android.displayName = "Obelisk Minimal Example";
   ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
   ios.bundleName = "Obelisk Minimal Example";
 
-  overrides = self: super: {
-    # canonical-json =
-    # nothunks = self.callHackageDirect {
-    # pkg = "nothunks";
-    # ver = "0.1.3";
-    # sha256 = "1zv28np3k3hg378vqm89v802xr0g8cwk7gy3mr77xrzy5jbgpa39";
-    # /a};
-    # cardano-prelude-test = self.callCabal2nix "cardano-prelude-test"  (sources.cardano-prelude + "/cardano-prelude-test") {};
-    # cardano-prelude = self.callCabal2nix "cardano-prelude"  (sources.cardano-prelude + "/cardano-prelude") {};
-    # cardano-binary = self.callCabal2nix "cardano-binary" (sources.cardano-base + "/binary") {};
+  packages = {
+    web3 = sources.hs-web3 + "/packages/web3";
+    web3-bignum = sources.hs-web3 + "/packages/bignum";
+    web3-crypto = sources.hs-web3 + "/packages/crypto";
+    # TODO: Make Types from this package usable from ghcjs; currently unbuildable in ghcjs as it pulls in web3-jsonrpc
+    web3-ethereum = sources.hs-web3 + "/packages/ethereum";
+    # fork buildable in ghcjs of Types extracted from web3-ethereum
+    web3-ethereum-core = sources.hs-web3 + "/packages/ethereum-core";
+    web3-hexstring = sources.hs-web3 + "/packages/hexstring";
+    web3-jsonrpc = sources.hs-web3 + "/packages/jsonrpc";
+    web3-provider = sources.hs-web3 + "/packages/provider";
+    web3-scale = sources.hs-web3 + "/packages/scale";
+    web3-solidity = sources.hs-web3 + "/packages/solidity";
   };
+
+  overrides =
+    foldExtensions [
+      # haskell overlay for cardano pkgs
+      (import ./cardano-overlays { inherit haskellLib pkgs lib; }).combined
+      (self: super: {
+        snap-core = haskellLib.dontCheck (self.callCabal2nix "snap-core" sources.snap-core {}); # unreleased 1.0.4.3
+        map-syntax = haskellLib.doJailbreak super.map-syntax;
+        xmlhtml = haskellLib.doJailbreak super.xmlhtml;
+        # TODO: upstream
+        hspec-webdriver = self.callCabal2nix "hspec-webdriver" sources.hspec-webdriver-clone {};
+        websockets = haskellLib.doJailbreak (self.callHackage "websockets" "0.12.7.2" {});
+        patch = haskellLib.doJailbreak super.patch;
+        reflex-dom-core = haskellLib.doJailbreak super.reflex-dom-core;
+        reflex = haskellLib.doJailbreak (haskellLib.dontCheck (self.callCabal2nix "reflex" sources.reflex {}));
+        browser-extension = (self.callCabal2nix "browser-extension" sources.browser-extension {});
+        aeson-gadt-th = self.callCabal2nix "aeson-gadt-th" sources.aeson-gadt-th {};
+        deriving-compat = self.callHackage "deriving-compat" "0.6" {};
+        constraints-extras = self.callCabal2nix "constraints-extras" sources.constraints-extras {};
+        vessel = haskellLib.doJailbreak (self.callCabal2nix "vessel" sources.vessel {});
+        dependent-monoidal-map = haskellLib.doJailbreak super.dependent-monoidal-map;
+        entropy = self.callCabal2nix "entropy" sources.entropy {};
+        ghcjs-dom = self.callHackage "ghcjs-dom" "0.9.5.0" {};
+        jsaddle-dom = self.callHackage "jsaddle-dom" "0.9.5.0" {};
+        ghcjs-dom-jsffi = self.callHackage "ghcjs-dom-jsffi" "0.9.5.0" {};
+        ghcjs-dom-jsaddle = self.callHackage "ghcjs-dom-jsaddle" "0.9.5.0" {};
+        validation-selective = haskellLib.doJailbreak super.validation-selective;
+        tomland = haskellLib.doJailbreak super.tomland;
+        # TODO(skylar): This may not even be needed cause of cardano-binary
+        hexstring = self.callCabal2nix "hexstring" sources.haskell-hexstring {};
+        # base16-bytestring = self.callHackage "base16-bytestring" "0.1.1.7" {};
+        # cryptohash-md5 = dontCheck super.cryptohash-md5;
+        # base16-bytestring = self.callHackage "base16-bytestring" "1.0.0.0" {};
+        # cardano-prelude = enableCabalFlag (doJailbreak super.cardano-prelude) "development";
+          # disableCabalFlag "-Wall"
+        # canonical-json = dontCheck (markUnbroken (self.callHackage "canonical-json" "0.6.0.0" {}));
+        # nothunks = dontCheck (self.callHackage "nothunks" "0.1.3" {});
+
+        # TODO: Should we use callHackageDirect instead?
+        # NOTE: These are all for hs-web3
+        # microlens-mtl = self.callHackage "microlens-mtl" "0.2.0.1" {};
+        # basement = self.callHackage "basement" "0.0.11" {};
+        # base-orphans = doJailbreak super.base-orphans;
+        # hashable = doJailbreak super.hashable;
+        # "OneTuple" = doJailbreak super."OneTuple";
+        base-orphans = self.callHackage "base-orphans" "0.8.6" {};
+        hashable = self.callHackage "hashable" "1.3.5.0" {};
+        time-compat = dontCheck super.time-compat;
+          # self.callHackage "time-compat" "1.9"
+        # base-orphans = self.callHackage "base-orphans" "0.8.6" {};
+        # base-orphans = self.callHackage "base-orphans" {};
+        OneTuple = doJailbreak super.OneTuple;
+        generics-sop = doJailbreak super.generics-sop;
+        wss-client = dontCheck (markUnbroken super.wss-client);
+        web3-scale = dontCheck (doJailbreak super.web3-scale);
+        web3-jsonrpc = doJailbreak super.web3-jsonrpc;
+        web3-hexstring = doJailbreak super.web3-hexstring;
+        web3-bignum = dontCheck (doJailbreak super.web3-bignum);
+        web3-crypto = dontCheck (doJailbreak super.web3-crypto);
+        web3-solidity = doJailbreak super.web3-solidity;
+        # web3-ethereum dependency
+        relapse = dontCheck (markUnbroken super.relapse);
+        # This jailbreak has a suspicious type warning
+        singletons = self.callHackage "singletons" "3.0.1" {};
+        vinyl = dontCheck (doJailbreak (markUnbroken super.vinyl));
+        web3-polkadot = doJailbreak (dontHaddock (dontCheck (self.callCabal2nix "web3-polkadot" "${sources.hs-web3}/packages/polkadot" { hspec-expectations = null; hspec-expectations-json = null; })));
+      })];
 
   tools = _: [ ckb ckb-cli pkgs.coreutils ];
 })

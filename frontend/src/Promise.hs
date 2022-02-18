@@ -12,7 +12,7 @@ module Promise ( Promise
 import Control.Lens
 import Control.Concurrent
 import Control.Monad.IO.Class (liftIO)
-import Language.Javascript.JSaddle (JSVal
+import Language.Javascript.JSaddle ( JSVal
                                    , MakeObject
                                    , JSM
                                    , js1

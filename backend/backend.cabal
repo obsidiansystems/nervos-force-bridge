@@ -22,6 +22,8 @@ library
                , tomland
                , text
                , obelisk-executable-config-lookup
+               , web3
+               , cardano-binary
   exposed-modules:
     Backend
   other-modules:

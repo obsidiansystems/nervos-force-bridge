@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "obelisk",
-  "branch": "so-nervos-fix",
+  "branch": "ll/ghc8_10-wip",
   "private": false,
-  "rev": "9350229aa5fe53145bed6cf9197062dfeb452965",
-  "sha256": "0awpf1rwm6j78qnw21md8djrzi8017gh8vhvfj4kl6fdf7c3l0fw"
+  "rev": "e98256a1c2409645c558b93f61e86e5b7068a044",
+  "sha256": "1kiw7i7y37q98wcxsqd74rn4cjy07bkr0cchigwpl5cmcs0wfqvs"
 }
