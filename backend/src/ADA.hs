@@ -37,3 +37,13 @@ import CKB.Capsule
 
 import Backend.Utils
 
+downloadConfigFiles :: MonadIO m => FilePath -> m ()
+downloadConfigFiles fp = do
+    createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-topology.json"]
+    createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-shelley-genesis.json"]
+    createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-config.json"]
+    createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-byron-genesis.json"]
+    createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-alonzo-genesis.json"]
+    
+
+

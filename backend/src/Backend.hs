@@ -22,16 +22,19 @@ import Data.Text as T
 import CKB
 import CKB.RPC
 
+import ADA
+
 import Control.Concurrent
 
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      runDevelopmentChain "ckb"
-      forkIO $ do
-        threadDelay 1000000
-        testRPC
+      downloadConfigFiles "ada-config"
+      --runDevelopmentChain "ckb"
+      --forkIO $ do
+        --threadDelay 1000000
+        --testRPC
 
       -- ckbInitDev
       -- flip runLoggingT (print . renderWithSeverity id) $ do
