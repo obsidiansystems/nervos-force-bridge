@@ -8,6 +8,7 @@ module Frontend where
 
 import Text.Read (readMaybe)
 import Control.Monad
+import Control.Applicative (liftA2)
 import Data.Bool (bool)
 import Data.Maybe (isJust, maybe)
 import qualified Data.Text as T
@@ -24,6 +25,8 @@ import Obelisk.Frontend
 import Obelisk.Configs
 import Obelisk.Route
 import Obelisk.Generated.Static
+
+import Cardano.Binary
 
 import Reflex.Dom.Core
 
@@ -51,7 +54,12 @@ instance Pretty BridgeDirection where
   pretty BridgeIn = "Cardano -> Nervos"
   pretty BridgeOut = "Nervos -> Cardano"
 
--- bridgeForm :: (PostBuild t m, DomBuilder t m, Prerender t m) => BridgeDirection ->
+type CKBAddress = T.Text
+
+data BridgeInTx =
+  BridgeInTx { bridgeInAmount :: Double
+             , bridgeInToAddress :: CKBAddress
+             }
 
 inChain :: BridgeDirection -> T.Text
 inChain BridgeIn = "Cardano"
@@ -136,15 +144,13 @@ frontend = Frontend
               amountThing <- dyn $ form balance <$> currentDirection
               amount <- fmap join $ holdDyn (pure Nothing) amountThing
 
-              elClass "div" "border rounded-lg p-4 mb-4" $ do
+              ckbAddress <- elClass "div" "border rounded-lg p-4 mb-4" $ do
                 elClass "div" "text-bold" $ text "input address"
                 ie <- inputElement $ def
                   & initialAttributes .~ ("placeholder" =: "enter your ckb address"
                                         <> "class" =: "focus:outline-none text-gray-700"
                                        )
-                let
-                  value = _inputElement_value ie
-                pure ()
+                pure $ _inputElement_value ie
 
               let
                 mkBridgeButtonClasses b =
@@ -156,7 +162,10 @@ frontend = Frontend
                 dynText $ ffor (checkAmount balance <$> amount) $ \case
                   True -> "Bridges"
                   False -> "Enter an amount"
-              liftJSM $ eval ("console.log('hello')" :: String)
+
+              let
+                inTx = liftA2 BridgeInTx <$> amount <*> (pure <$> ckbAddress)
+
               performEvent_ $ maybe (pure ()) (Nami.signTest api) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
           _ -> do
             text "You require nami wallet"

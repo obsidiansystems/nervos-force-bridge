@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "hs-web3",
-  "branch": "ghcjs-pure-keccak-in-web3-solidity",
+  "branch": "force-bump",
   "private": false,
-  "rev": "4d9ef035d58f87bda0011474cf4614c16c4ced6b",
-  "sha256": "1hygv4j0ag2w1sqh0q9qrchq2rdhrvdsndzg234m23i07vps3f65"
+  "rev": "c9c7782ddddca9c80d34c450fa57a4538e653b11",
+  "sha256": "0chi2sfqana0b06mfdcv8jh50vsqapfk8cmh9xc5vrwp441h2wsn"
 }

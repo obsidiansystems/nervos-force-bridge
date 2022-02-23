@@ -23,6 +23,8 @@ library
                , text
                , obelisk-executable-config-lookup
                , web3
+               , web3-jsonrpc
+               , web3-provider
                , cardano-binary
   exposed-modules:
     Backend

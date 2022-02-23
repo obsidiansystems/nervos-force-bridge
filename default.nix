@@ -23,6 +23,7 @@ let
 
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
+  capsule = import sources.capsule {};
   pkgs = obelisk.pkgs;
 
 in project ./. ({ pkgs, ... }: let
@@ -106,7 +107,11 @@ in with pkgs.haskell.lib; {
         web3-hexstring = doJailbreak super.web3-hexstring;
         web3-bignum = dontCheck (doJailbreak super.web3-bignum);
         web3-crypto = dontCheck (doJailbreak super.web3-crypto);
-        web3-solidity = doJailbreak super.web3-solidity;
+        web3-solidity = doJailbreak (dontCheck super.web3-solidity);
+        web3-ethereum-core = doJailbreak (dontCheck super.web3-ethereum-core);
+        web3-ethereum = doJailbreak (dontCheck super.web3-ethereum);
+          # doJailbreak (self.callCabal2nix "web3-solidity" (sources.hs-web3 + "/packages/solidity") {});
+          # doJailbreak super.web3-solidity;
         # web3-ethereum dependency
         relapse = dontCheck (markUnbroken super.relapse);
         # This jailbreak has a suspicious type warning
@@ -115,5 +120,5 @@ in with pkgs.haskell.lib; {
         web3-polkadot = doJailbreak (dontHaddock (dontCheck (self.callCabal2nix "web3-polkadot" "${sources.hs-web3}/packages/polkadot" { hspec-expectations = null; hspec-expectations-json = null; })));
       })];
 
-  tools = _: [ ckb ckb-cli pkgs.coreutils ];
+  tools = _: [ ckb ckb-cli capsule pkgs.coreutils ];
 })

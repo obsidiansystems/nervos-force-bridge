@@ -19,6 +19,7 @@ library
                , serialise
                , bytestring
                , hexstring
+               , cardano-binary
   exposed-modules:
     Frontend
   other-modules:
