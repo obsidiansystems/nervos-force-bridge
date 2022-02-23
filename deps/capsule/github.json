@@ -1,7 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "capsule",
+  "branch": "v0.2.3-nix",
   "private": false,
-  "rev": "b1de7412e1943f26e8670f79d06951119f23eca7",
-  "sha256": "1jik0n9h7pi4a8yjd4qlr4qfs1slsmfwv2v1cpk3m2wiz80cak7q"
+  "rev": "0b45238dace72d4f55c87a9b913ab196285de17f",
+  "sha256": "0ns56ij1cazfh82acqd49aski75xa0igm13qwn034rjq2v9zaq1y"
 }
