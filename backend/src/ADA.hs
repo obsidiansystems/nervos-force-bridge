@@ -39,7 +39,6 @@ import Backend.Utils
 
 downloadConfigFiles :: MonadIO m => FilePath -> m ()
 downloadConfigFiles path = liftIO $ do
-    createProcess $ inDirectory path $ proc "mkdir" [path] 
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-topology.json"]
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-shelley-genesis.json"]
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-config.json"]
