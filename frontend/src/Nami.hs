@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Nami where
@@ -12,6 +13,7 @@ import Control.Lens
 import Control.Monad.Fix
 import Control.Concurrent
 import Control.Monad.IO.Class (liftIO)
+import Obelisk.Generated.Static
 
 import Promise
 
@@ -98,3 +100,20 @@ signTest napi addr = liftJSM $ do
   where
     message = "RPC Not detected: Testing Sign Functionality Instead, if you see this signing is working"
     cbor = toText $ fromBytes $ LBS.toStrict $ serialise $ T.pack message
+
+-- WebAssembly.instantiateStreaming(fetch(/static/wasm/cardano_serialization_lib_bg.wasm), importObject)
+testWasm :: MonadJSM m => m ()
+testWasm = liftJSM $ do
+  eval $ "importObject = { imports: { imported_func: arg => console.log(arg), wasi_unstable: () => {} }}"
+  -- eval $ "importObject = { imports: { imported_func: arg => console.log(arg) } }"
+  -- liftIO $ putStrLn $ "WebAssembly.instantiateStreaming(fetch('" <> $(static "wasm/cardano_serialization_lib_bg.wasm") <> "'), importObject)"
+  -- promise <- eval $ "WebAssembly.instantiateStreaming(fetch('" <> cdn <> "'), importObject)"
+  promise <- eval $ "WebAssembly.instantiateStreaming(fetch('" <> cdn <> "'), importObject)"
+  result <- promiseMaybe (unsafeToPromise promise) (pure . id)
+  case result of
+    Just _ -> eval $ "console.log('Yay')"
+    Nothing -> eval $ "console.log('Womp womp')"
+  pure ()
+  where
+    notcdn = $(static "wasm/cardano_serialization_lib_bg.wasm")
+    cdn = "https://cdn.jsdelivr.net/npm/@emurgo/cardano-serialization-lib-browser@10.0.3/cardano_serialization_lib_bg.wasm"

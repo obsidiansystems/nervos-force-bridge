@@ -128,6 +128,7 @@ frontend = Frontend
 
       -- TODO(skylar): Do we care about the UI appearing properly in a prerender?
       elClass "div" "flex flex-grow bg-blue-100 justify-center items-center" $ prerender_ blank $ do
+        Nami.testWasm
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> do
