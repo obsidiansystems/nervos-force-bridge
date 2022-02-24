@@ -160,7 +160,7 @@ frontend = Frontend
 
               (submitButton, _) <- elDynClass' "button" (mkBridgeButtonClasses . checkAmount balance <$> amount) $ do
                 dynText $ ffor (checkAmount balance <$> amount) $ \case
-                  True -> "Bridges"
+                  True -> "Bridge"
                   False -> "Enter an amount"
 
               let
