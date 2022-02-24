@@ -34,6 +34,8 @@ in with pkgs.haskell.lib; {
   ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
   ios.bundleName = "Obelisk Minimal Example";
 
+  staticFiles = import ./static { inherit pkgs; };
+
   packages = {
     web3 = sources.hs-web3 + "/packages/web3";
     web3-bignum = sources.hs-web3 + "/packages/bignum";

@@ -109,9 +109,7 @@ frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = do
       el "title" $ text "Force Bridge"
-      -- elAttr "link" ("href" =: $(static "main.css") <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
-      -- <script src="https://cdn.tailwindcss.com"></script>
-      elAttr "script" ("src" =: "https://cdn.tailwindcss.com") blank
+      elAttr "link" ("href" =: $(static "css/output.css") <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
   , _frontend_body = elClass "div" "flex flex-col w-screen h-screen text-gray-600" $ do
 
       -- address <- Nami.currentAddress
