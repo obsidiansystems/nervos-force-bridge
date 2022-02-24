@@ -18,12 +18,14 @@ with obelisk;
 let
   nix-thunk = import ./deps/nix-thunk {};
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
+  sourcesCardano = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./cardano-overlays/cardano-packages/dep;
 
   foldExtensions = lib.foldr lib.composeExtensions (_: _: {});
 
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
   capsule = import sources.capsule {};
+  cardano-node = import sourcesCardano.cardano-node {};
   pkgs = obelisk.pkgs;
 
 in project ./. ({ pkgs, ... }: let
@@ -120,5 +122,5 @@ in with pkgs.haskell.lib; {
         web3-polkadot = doJailbreak (dontHaddock (dontCheck (self.callCabal2nix "web3-polkadot" "${sources.hs-web3}/packages/polkadot" { hspec-expectations = null; hspec-expectations-json = null; })));
       })];
 
-  tools = _: [ ckb ckb-cli capsule pkgs.coreutils ];
+  tools = _: [ ckb ckb-cli capsule pkgs.coreutils cardano-node];
 })
