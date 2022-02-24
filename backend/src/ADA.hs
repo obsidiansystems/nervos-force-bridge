@@ -31,14 +31,16 @@ import Toml.Codec ( TomlCodec
                   )
 import qualified Toml.Codec as Toml
 
-import CKB.Types
-import CKB.Config
-import CKB.Capsule
+import ADA.Types
 
 import Backend.Utils
 
+-- TODO (alex): include nix-env -iA nixos.cacert on default.nix and 
+-- echo "cacert=/etc/ssl/certs/ca-certificates.crt" >> ~/.curlrc
+-- for curl.
 downloadConfigFiles :: MonadIO m => FilePath -> m ()
 downloadConfigFiles path = liftIO $ do
+    createProcess $ inDirectory path $ proc "mkdir" ["db"]
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-topology.json"]
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-shelley-genesis.json"]
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-config.json"]
@@ -46,5 +48,16 @@ downloadConfigFiles path = liftIO $ do
     createProcess $ inDirectory path $ proc "curl" ["-O","-J","https://hydra.iohk.io/build/7654130/download/1/testnet-alonzo-genesis.json"]
     return ()
     
-
+runChain :: MonadIO m => FilePath -> m ()
+runChain path = do
+    createProcess $ inDirectory path $ 
+        proc cardanoPath ["run","--topology",topology,"--database-path",db,"--socket-path",socket,"--host-addr",host,"--port",port,"--config",config]
+    where
+        topology = path ++ "/mainnet-topology.json"
+        db = path ++ "/db"
+        socket = path ++ "/node.socket"
+        host = "127.0.0.1"
+        port = 3001
+        config = path ++ "/mainnet-config.json"
+        
 
