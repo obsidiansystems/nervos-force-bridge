@@ -18,14 +18,13 @@ with obelisk;
 let
   nix-thunk = import ./deps/nix-thunk {};
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
-  sourcesCardano = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./cardano-overlays/cardano-packages/dep;
 
   foldExtensions = lib.foldr lib.composeExtensions (_: _: {});
 
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
   capsule = import sources.capsule {};
-  cardano-node = import sourcesCardano.cardano-node {};
+  cardano-node = (import sources.cardano-node {}).cardano-node;
   pkgs = obelisk.pkgs;
 
 in project ./. ({ pkgs, ... }: let
