@@ -12,7 +12,7 @@ in pkgs.stdenv.mkDerivation {
   buildInputs = [pkgs.nodejs];
   installPhase = ''
     mkdir -p $out/css
-    mkdir -p $out/wasm
+    mkdir -p $out/js
     # mkdir -p $out/images
 
     # Setting up the node environment:
@@ -27,7 +27,9 @@ in pkgs.stdenv.mkDerivation {
     # postcss css/styles.css -o $out/styles.css
     tailwindcss -i ./input.css -o $out/css/output.css
 
-    cp node_modules/@emurgo/cardano-serialization-lib-browser/cardano_serialization_lib_bg.wasm $out/wasm/cardano_serialization_lib_bg.wasm
+    webpack
+
+    cp -r dist/* $out/js/
 
     # We can write other commands to produce more static files as well:
     # cp -r images/* $out/images/
