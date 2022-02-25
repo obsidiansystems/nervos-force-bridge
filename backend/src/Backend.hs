@@ -28,12 +28,11 @@ import Control.Concurrent
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      flip runLoggingT (print . renderWithSeverity pretty) $ runDevelopmentChain "ckb"
-      forkIO $ do
+      -- flip runLoggingT (print . renderWithSeverity pretty) $ runDevelopmentChain "ckb"
+      {- forkIO $ do
         -- waitForChain
         threadDelay 1000000
-        testRPC
-
+        testRPC -}
       -- ckbInitDev
       -- flip runLoggingT (print . renderWithSeverity id) $ do
         -- logMessage $ WithSeverity Informational "Eheheh"

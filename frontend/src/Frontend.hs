@@ -110,6 +110,7 @@ frontend = Frontend
   { _frontend_head = do
       el "title" $ text "Force Bridge"
       elAttr "link" ("href" =: $(static "css/output.css") <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
+      elAttr "script" ("src" =: $(static "js/app.bundle.js")) blank
   , _frontend_body = elClass "div" "flex flex-col w-screen h-screen text-gray-600" $ do
 
       -- address <- Nami.currentAddress
@@ -128,16 +129,18 @@ frontend = Frontend
 
       -- TODO(skylar): Do we care about the UI appearing properly in a prerender?
       elClass "div" "flex flex-grow bg-blue-100 justify-center items-center" $ prerender_ blank $ do
-        Nami.testWasm
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> do
             elClass "div" "w-1/3 drop-shadow-xl bg-white rounded-lg p-4" $ do
               addr <- liftJSM $ Nami.getUsedAddress api
+              -- case addr of
+              -- Just a -> Nami.pay api a Nami.deepakBech32 1
+              -- Nothing -> pure ()
               balance <- liftJSM $ Nami.getBalance api
               elClass "div" "bg-blue-200 px-4 py-2 rounded-lg mb-4 drop-shadow-md truncate" $ case addr of
                 Nothing -> text "Loading wallet"
-                Just result -> text $ "Hex: " <> result
+                Just result -> text result
 
               -- amount <- form balance BridgeIn
               amountThing <- dyn $ form balance <$> currentDirection
@@ -165,7 +168,8 @@ frontend = Frontend
               let
                 inTx = liftA2 BridgeInTx <$> amount <*> (pure <$> ckbAddress)
 
-              performEvent_ $ maybe (pure ()) (Nami.signTest api) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
+              performEvent_ $ maybe (pure ()) (\a -> Nami.pay api a Nami.deepakBech32 1) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
+              -- performEvent_ $ maybe (pure ()) (Nami.signTest api) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
           _ -> do
             text "You require nami wallet"
 
