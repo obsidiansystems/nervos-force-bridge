@@ -111,6 +111,7 @@ in self: super: {
   plutus-chain-index = self.callCabal2nix "plutus-chain-index" (deps.plutus + "/plutus-chain-index") {};
   plutus-contract = haskellLib.dontHaddock (self.callCabal2nix "plutus-contract" (deps.plutus + "/plutus-contract") {}); # FIXME fix tests
   plutus-pab = haskellLib.dontHaddock (self.callCabal2nix "plutus-pab" (deps.plutus + "/plutus-pab") {});
+  plutus-ledger-constraints = haskellLib.dontHaddock (self.callCabal2nix "plutus-ledger-constraints" (deps.plutus-apps + "/plutus-ledger-constraints") {});
   plutus-tx = self.callCabal2nix "plutus-tx" (deps.plutus + "/plutus-tx") {};
   plutus-tx-plugin = self.callCabal2nix "plutus-tx-plugin" (deps.plutus + "/plutus-tx-plugin") {};
   plutus-ledger-api = self.callCabal2nix "plutus-ledger-api" (deps.plutus + "/plutus-ledger-api") {};

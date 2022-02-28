@@ -49,15 +49,16 @@ downloadConfigFiles path = liftIO $ do
     return ()
     
 runChain :: MonadIO m => FilePath -> m ()
-runChain path = do
+runChain path = liftIO $ do
     createProcess $ inDirectory path $ 
         proc cardanoPath ["run","--topology",topology,"--database-path",db,"--socket-path",socket,"--host-addr",host,"--port",port,"--config",config]
+    return ()
     where
         topology = path ++ "/mainnet-topology.json"
         db = path ++ "/db"
         socket = path ++ "/node.socket"
         host = "127.0.0.1"
-        port = 3001
+        port = "3001"
         config = path ++ "/mainnet-config.json"
         
 

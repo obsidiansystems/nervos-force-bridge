@@ -18,7 +18,7 @@ with obelisk;
 let
   nix-thunk = import ./deps/nix-thunk {};
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
-
+  imports = [ ./cardano-overlays/cardano-packages/default.nix ];
   foldExtensions = lib.foldr lib.composeExtensions (_: _: {});
 
   ckb = import sources.ckb {};
@@ -77,6 +77,7 @@ in with pkgs.haskell.lib; {
         ghcjs-dom-jsaddle = self.callHackage "ghcjs-dom-jsaddle" "0.9.5.0" {};
         validation-selective = haskellLib.doJailbreak super.validation-selective;
         tomland = haskellLib.doJailbreak super.tomland;
+        # plutus-ledger-constraints = haskellLib.doJailbreak cardano-ledger-constraints;
         # TODO(skylar): This may not even be needed cause of cardano-binary
         hexstring = self.callCabal2nix "hexstring" sources.haskell-hexstring {};
         # base16-bytestring = self.callHackage "base16-bytestring" "0.1.1.7" {};

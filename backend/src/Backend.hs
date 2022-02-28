@@ -23,7 +23,7 @@ import CKB
 import CKB.RPC
 
 import ADA
-
+import ADA.Contracts.Bridge
 import Control.Concurrent
 
 
