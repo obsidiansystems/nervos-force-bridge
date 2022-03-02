@@ -153,9 +153,13 @@ frontend = Frontend
               -- Just a -> Nami.pay api a Nami.deepakBech32 1
               -- Nothing -> pure ()
               balance <- liftJSM $ Nami.getBalance api
-              elClass "div" "select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
+              elClass "div" "group relative select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 \
+                            \ rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
                 Nothing -> text "Loading wallet"
-                Just result -> text $ truncateMiddleText result truncateLength
+                Just result -> do
+                  elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 select-all \
+                                \ selection:bg-secondary selection:text-black break-all invisible group-hover:visible" $ text result
+                  elClass "div" "" $ text $ truncateMiddleText result truncateLength
 
               -- amount <- form balance BridgeIn
               amountThing <- dyn $ form balance <$> currentDirection
