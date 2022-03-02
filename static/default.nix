@@ -11,6 +11,7 @@ in pkgs.stdenv.mkDerivation {
   src = ./src;
   buildInputs = [pkgs.nodejs];
   installPhase = ''
+    set -euo pipefail
     mkdir -p $out/css
     mkdir -p $out/js
     # mkdir -p $out/images

@@ -80,8 +80,8 @@ form b direction = do
     elClass "div" "flex flex-row items-center justify-between mb-4" $ do
       elClass "div" "flex flex-row items-center" $ do
         elClass "div" "mr-2 font-bold" $ text $ inChain direction
-        elClass "div" "bg-blue-400 px-2 py-1 rounded-lg text-sm font-bold text-white drop-shadow-md" $ text "Ada | ada"
-      elClass "div" "text-right text-blue-500 font-light" $ text $ "Max " <> tShow balance
+        elClass "div" "bg-primary px-2 py-1 rounded-lg text-sm font-bold text-white drop-shadow-md" $ text "Ada | ada"
+      elClass "div" "text-right text-primary font-light" $ text $ "Max " <> tShow balance
 
     ie <- inputElement $ def
       & initialAttributes .~ ("placeholder" =: "0.0"
@@ -94,7 +94,7 @@ form b direction = do
     elClass "div" "flex flex-row items-center justify-between mb-2" $ do
       elClass "div" "flex flex-row items-center" $ do
         elClass "div" "mr-2 font-bold" $ text $ outChain direction
-        elClass "div" "bg-blue-100 px-2 py-1 rounded-lg text-sm font-bold drop-shadow-md" $ text "Ada | ada"
+        elClass "div" "select-none bg-gradient-to-r from-secondary to-secondary-end px-2 py-1 rounded-lg text-sm font-bold drop-shadow-md" $ text "Ada | ada"
 
       -- TODO(skylar): Show the fee in proper encoding
       elClass "div" "text-right text-gray-400 font-light" $ text $ "Fee " <> "0.001"
@@ -104,6 +104,21 @@ form b direction = do
       Just v -> tShow $ v - fee
 
   pure amount
+
+truncateMiddleText :: T.Text -> Int -> T.Text
+truncateMiddleText s l
+  | length (T.unpack s) <= l = s
+  | l < 3 = s
+  | otherwise =
+    let
+      s' = T.unpack s
+      (a, b) = quotRem l 2
+      head = take a s'
+      tail = drop (length s' - (a + b)) s'
+    in T.pack $ head <> "..." <> tail
+
+truncateLength :: Int
+truncateLength = 20
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
@@ -120,7 +135,7 @@ frontend = Frontend
         changeEvent <- elClass "div" "bg-white w-full p-4 drop-shadow-md items-center flex flex-row justify-between" $ do
           elClass "h1" "font-semibold" $ text "Force Bridge Ob"
 
-          (buttonEl, _) <- elClass' "button" "rounded-md bg-blue-200 font-semibold text-black px-4 py-2 drop-shadow-md" $ do
+          (buttonEl, _) <- elClass' "button" "font-bold rounded-md bg-gradient-to-r from-secondary to-secondary-end text-black px-4 py-2 drop-shadow-md" $ do
             dynText $ pretty <$> currentDirection
 
           elClass "div" "" $ el "div" $ text "Menu"
@@ -128,19 +143,19 @@ frontend = Frontend
           pure $ changeBridgeDirection <$ domEvent Click buttonEl
 
       -- TODO(skylar): Do we care about the UI appearing properly in a prerender?
-      elClass "div" "flex flex-grow bg-blue-100 justify-center items-center" $ prerender_ blank $ do
+      elClass "div" "flex bg-gradient-to-br from-tertiary to-tertiary-end flex-grow justify-center items-center pt-36 pb-8" $ prerender_ blank $ do
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> do
-            elClass "div" "w-1/3 drop-shadow-xl bg-white rounded-lg p-4" $ do
+            elClass "div" "rounded-2xl w-90 bg-white p-6 shadow-md" $ do
               addr <- liftJSM $ Nami.getUsedAddress api
               -- case addr of
               -- Just a -> Nami.pay api a Nami.deepakBech32 1
               -- Nothing -> pure ()
               balance <- liftJSM $ Nami.getBalance api
-              elClass "div" "bg-blue-200 px-4 py-2 rounded-lg mb-4 drop-shadow-md truncate" $ case addr of
+              elClass "div" "select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
                 Nothing -> text "Loading wallet"
-                Just result -> text result
+                Just result -> text $ truncateMiddleText result truncateLength
 
               -- amount <- form balance BridgeIn
               amountThing <- dyn $ form balance <$> currentDirection
@@ -157,7 +172,7 @@ frontend = Frontend
               let
                 mkBridgeButtonClasses b =
                   T.intercalate " " [ "duration-500 transition-all w-full border rounded-lg px-4 py-2 font-semibold"
-                                    , bool "cursor-not-allowed bg-white" "bg-blue-400 drop-shadow-lg text-white border-transparent" b
+                                    , bool "cursor-not-allowed bg-white" "bg-primary drop-shadow-lg text-white border-transparent" b
                                     ]
 
               (submitButton, _) <- elDynClass' "button" (mkBridgeButtonClasses . checkAmount balance <$> amount) $ do
