@@ -120,7 +120,12 @@ in with pkgs.haskell.lib; {
         singletons = self.callHackage "singletons" "3.0.1" {};
         vinyl = dontCheck (doJailbreak (markUnbroken super.vinyl));
         web3-polkadot = doJailbreak (dontHaddock (dontCheck (self.callCabal2nix "web3-polkadot" "${sources.hs-web3}/packages/polkadot" { hspec-expectations = null; hspec-expectations-json = null; })));
-      })];
 
-  tools = _: [ ckb ckb-cli capsule pkgs.coreutils ];
+        # Add executables to backend depends
+        backend = haskellLib.overrideCabal super.backend {
+          librarySystemDepends = [
+            ckb ckb-cli capsule
+          ];
+        };
+      })];
 })
