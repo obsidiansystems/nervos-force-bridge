@@ -34,5 +34,7 @@ in pkgs.stdenv.mkDerivation {
 
     # We can write other commands to produce more static files as well:
     # cp -r images/* $out/images/
+
+    cp ./favicon.ico $out/
   '';
 }
