@@ -12,9 +12,9 @@ import System.Directory
 
 import System.IO (print)
 import Control.Monad.Log
-import Control.Monad.IO.Class (liftIO, MonadIO)
-
-import Cardano.Binary
+import Control.Monad.IO.Class ( liftIO
+                              , MonadIO
+                              )
 
 import Prettyprinter (pretty)
 import Data.Text as T
@@ -24,11 +24,10 @@ import CKB.RPC
 
 import Control.Concurrent
 
-
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      flip runLoggingT (print . renderWithSeverity pretty) $ runDevNode "ckb"
+      -- flip runLoggingT (print . renderWithSeverity pretty) $ runDevNode "ckb"
       {- forkIO $ do
         -- waitForChain
         threadDelay 1000000
