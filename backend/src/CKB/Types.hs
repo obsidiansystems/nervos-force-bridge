@@ -8,6 +8,11 @@
 module CKB.Types where
 
 import System.Which
+import System.Directory
+import System.Process
+
+import Control.Monad.IO.Class
+
 import qualified Data.Text as T
 
 import Data.Aeson
@@ -17,8 +22,9 @@ import qualified Data.Aeson.Types as Aeson
 import Control.Applicative ((<|>))
 
 import Data.Attoparsec.Text as A
-
 import GHC.Generics
+
+import Backend.Utils
 
 ckbPath :: FilePath
 ckbPath = $(staticWhich "ckb")
@@ -116,3 +122,30 @@ ckbytes = do
   string "(CKB)"
   pure $ CKBytes $ truncate $ n * 100000000
   where
+
+
+-- TODO(skylar): Split this out into another place
+procCli :: MonadIO m => FilePath -> [String] -> m CreateProcess
+procCli ckbCliDir args = liftIO $ do
+  -- absoluteDir <- makeAbsolute ckbCliDir
+  pure
+    $ addEnvironmentVariable ("CKB_CLI_HOME", ckbCliDir)
+    $ proc ckbCliPath args
+
+procWithCkbCliIn :: MonadIO m => FilePath -> FilePath -> FilePath -> [String] -> m CreateProcess
+procWithCkbCliIn ckbCliDir wd path args = liftIO $ do
+  absoluteDir <- makeAbsolute ckbCliDir
+  pure
+    $ addEnvironmentVariable ("CKB_CLI_HOME", absoluteDir)
+    $ inDirectory wd
+    $ proc path args
+
+addEnvironmentVariable :: (String, String) -> CreateProcess -> CreateProcess
+addEnvironmentVariable = addEnvironmentVariables . pure
+
+addEnvironmentVariables :: [(String, String)] -> CreateProcess -> CreateProcess
+addEnvironmentVariables args cp =
+  cp { env = env cp <> Just args }
+
+relativeCkbHome :: FilePath -> FilePath
+relativeCkbHome = (<> "/.ckb-cli")

@@ -49,7 +49,7 @@ import Data.Attoparsec.Text as A
 
 import Backend.Utils
 
--- TODO(skylar): DevNode type, what goes in here?
+-- TODO(skylar): Do we need the password for these accounts?
 data DevNode = DevNode
   { devNodeMiner :: Account
   , devNodeGenesis1 :: Account
@@ -59,26 +59,11 @@ data DevNode = DevNode
 
 deriveJSON defaultOptions ''DevNode
 
-procCli :: FilePath -> [String] -> CreateProcess
-procCli workingDirectory args =
-  addEnvironmentVariable ("CKB_CLI_HOME", workingDirectory)
-  $ proc ckbCliPath args
-
-addEnvironmentVariable :: (String, String) -> CreateProcess -> CreateProcess
-addEnvironmentVariable = addEnvironmentVariables . pure
-
-addEnvironmentVariables :: [(String, String)] -> CreateProcess -> CreateProcess
-addEnvironmentVariables args cp =
-  cp { env = env cp <> Just args }
-
-relativeCkbHome :: FilePath -> FilePath
-relativeCkbHome = (<> "/.ckb-cli")
-
 -- TODO(skylar): How do we handle the working directory
 createNewAccount :: MonadIO m => FilePath -> m Account
 createNewAccount path = liftIO $ do
-  putStrLn $ show $ relativeCkbHome path
-  d <- readCreateProcess (procCli (relativeCkbHome path) ["account", "new"]) input
+  cp <- procCli (relativeCkbHome path) ["account", "new"]
+  d <- readCreateProcess cp input
   let Right a = parseOnly account . T.pack $ d
   pure a
   where
@@ -90,11 +75,12 @@ accountFromPrivateKey path pk = do
   liftIO $ withTempFile "." "pk" $ \fp handle -> do
     T.hPutStr handle pk
     hFlush handle
-    d <- readCreateProcess (procCli (relativeCkbHome path) ["account"
-                                                           , "import"
-                                                           , "--privkey-path"
-                                                           , fp
-                                                           ]) "hello\nhello"
+    cp <- procCli (relativeCkbHome path) ["account"
+                                         , "import"
+                                         , "--privkey-path"
+                                         , fp
+                                         ]
+    d <- readCreateProcess cp "hello\nhello"
     let Right a = parseOnly account . T.pack $ d
     pure a
 
@@ -133,6 +119,10 @@ runDevNode path = do
   -- TODO(skylar): Properly poll/wait for the chain to start
   waitForChain
   runMiner path
+
+  -- deployProject (devNodeGenesis1 node) "on-chain/test-sudt/"
+
+  -- Check deployment and deploy stuff
   pure ()
 
 runChain :: MonadIO m => FilePath -> m ()

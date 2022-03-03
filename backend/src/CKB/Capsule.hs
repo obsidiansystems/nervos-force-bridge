@@ -21,13 +21,39 @@ buildProject cfp = do
                                                                    , "--release"
                                                                    ]
   pure ()
-
+-- 6234600010000
+-- 20000000000
 -- TODO(skylar): This is only on testnet
+-- TODO(skylar): Monitor deployment toml
+-- TODO(skylar): Monitor the migrations directory post deployment
 deployProject :: ForceM m => Account -> FilePath -> m ()
 deployProject account cfp = do
   logInfo "Starting deployment"
-  _ <- liftIO $ createProcess $ inDirectory cfp $ proc capsulePath [ "deploy"
-                                                                   , "--address"
-                                                                   , T.unpack $ unTestnetAddress $ testnet_address $ account
-                                                                   ]
+  capsuleDeployProc <- mkDeployProc'
+  output <- liftIO $ readCreateProcess capsuleDeployProc "y\nhello\nhello"
+  logInfo $ T.pack output
   pure ()
+  where
+    mkDeployProc' = do
+      pure $ inDirectory cfp $ proc capsulePath [ "deploy"
+                                                , "--address"
+                                                , T.unpack
+                                                  $ unTestnetAddress
+                                                  $ testnet_address
+                                                  $ account
+                                                ]
+      {-procWithCkbCliIn "./ckb/.ckb-cli" cfp capsulePath [ "deploy"
+                                                      , "--address"
+                                                      , T.unpack
+                                                        $ unTestnetAddress
+                                                        $ testnet_address
+                                                        $ account
+                                                      ]-}
+    {-mkDeployProc = do
+      procWithCkbCliIn "./ckb/.ckb-cli" cfp capsulePath [ "deploy"
+                                                      , "--address"
+                                                      , T.unpack
+                                                        $ unTestnetAddress
+                                                        $ testnet_address
+                                                        $ account
+                                                      ]-}
