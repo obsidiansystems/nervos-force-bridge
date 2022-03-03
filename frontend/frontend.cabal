@@ -22,6 +22,7 @@ library
                , cardano-binary
                , containers
                , time
+               , aeson
   exposed-modules:
     Frontend
   other-modules:
