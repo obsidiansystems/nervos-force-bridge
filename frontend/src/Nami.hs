@@ -378,7 +378,9 @@ updateTx bin = do
 
 readTxs :: MonadJSM m => m (Map TxHash BridgeInTx)
 readTxs = liftJSM $ do
+  clog "Starting read"
   storage <- jsg "localStorage"
+  clog storage
   transactions <- storage ^. js1 "getItem" "txns" >>= fromJSVal
   clog transactions
   clog "Done read"
