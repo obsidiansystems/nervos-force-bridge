@@ -141,11 +141,14 @@ frontend = Frontend
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> do
+            _ <- liftJSM $ Nami.clog $ T.pack "Thing"
             (submitTx, waiting, gotErr) <- elClass "div" "w-1/3 drop-shadow-xl bg-white rounded-lg p-4" $ mdo
+              _ <- liftJSM $ Nami.clog $ T.pack "Getting address"
               addr <- liftJSM $ Nami.getUsedAddress api
               -- case addr of
               -- Just a -> Nami.pay api a Nami.deepakBech32 1
               -- Nothing -> pure ()
+              _ <- liftJSM $ Nami.clog $ T.pack "Getting balance"
               balance <- liftJSM $ Nami.getBalance api
               elClass "div" "bg-blue-200 px-4 py-2 rounded-lg mb-4 drop-shadow-md truncate" $ case addr of
                 Nothing -> text "Loading wallet"
@@ -204,15 +207,20 @@ frontend = Frontend
 
               pure $ (fmapMaybe (preview _Right) resultTx, submitting, err)
 
+            _ <- liftJSM $ Nami.clog $ T.pack "Current time"
             ct <- currentTime
+            _ <- liftJSM $ Nami.clog $ T.pack "Current block"
             cb <- currentBlock
 
             elClass "div" "mt-4" $ mdo
+
               elClass "div" "ml-2 font-semibold text-lg text-gray-600 mb-1" $ text "Bridge Transactions"
+              _ <- liftJSM $ Nami.clog $ T.pack "Reading"
               txs <- Nami.readTxs
               history <- foldDyn ($) txs $ mconcat [ (\x -> Map.insert (Nami.bridgeInTxHash x) x) <$> submitTx
                                                    , updates
                                                    ]
+              _ <- liftJSM $ Nami.clog $ T.pack "Writing"
               performEvent_ $ Nami.writeTxs <$> updated history
               t <- liftIO $ getCurrentTime
               updatesMap <- list history (bridgeInTx cb ct)
@@ -228,6 +236,7 @@ frontend = Frontend
             elDynClass "div" (mkScrimClasses <$> waiting) $ do
               elClass "div" "p-4 rounded-lg bg-white text-lg drop-shadow-lg font-semibold" $ text "Waiting for wallet signature"
 
+            _ <- liftJSM $ Nami.clog $ T.pack "Making recents"
             recentTransactionsFeed $ Nami.bridgeInTxHash <$> submitTx
 
           _ -> do
