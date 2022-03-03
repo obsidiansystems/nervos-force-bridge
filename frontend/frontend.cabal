@@ -20,6 +20,8 @@ library
                , bytestring
                , hexstring
                , cardano-binary
+               , containers
+               , time
   exposed-modules:
     Frontend
   other-modules:

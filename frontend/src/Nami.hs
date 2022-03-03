@@ -8,12 +8,20 @@ import JSDOM
 import JSDOM.Types (fromJSArrayUnchecked)
 
 import Control.Lens
+import Control.Monad.IO.Class
 
 import Promise
 
+import Data.Time
+
+import Data.Aeson
+import qualified Data.Aeson as Aeson
+import Data.Aeson.TH
 import Data.HexString
+import Data.Map (Map)
+import qualified Data.Map as Map
 import qualified Data.Text as T
-import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.ByteString.Lazy as LBS
 
 import Language.Javascript.JSaddle ( eval
@@ -40,12 +48,43 @@ import Language.Javascript.JSaddle ( eval
                                    , JSM
                                    )
 
-
 import Codec.Serialise
 import GHC.Natural
 
 data APIError = APIError String
 type Address = T.Text
+
+
+data Status
+  = LockSubmitted
+  | LockAwaitingConfirmations Int
+  | AwaitingMint
+  | Bridged UTCTime
+  deriving (Eq, Show)
+
+type TxHash = T.Text
+newtype CKBAddress =
+  CKBAddress { unCKBAddress :: T.Text }
+  deriving (Eq, Show)
+
+mkCKBAddress :: T.Text -> Maybe CKBAddress
+mkCKBAddress t
+  | T.length t == targetLen && T.isPrefixOf (T.pack "ckt") t = Just $ CKBAddress t
+  | otherwise = Nothing
+  where
+    targetLen = T.length $ T.pack "ckt1qyq9u9h0egwgy73qjkz29gzkqq67fdl60r3s2egrpu"
+
+data BridgeInTx =
+  BridgeInTx { bridgeInAmount :: Double
+             , bridgeInToAddress :: CKBAddress
+             , bridgeInTxHash :: TxHash
+             , bridgeInTxStatus :: Status
+             , bridgeInStart :: UTCTime
+             }
+
+deriveJSON defaultOptions ''CKBAddress
+deriveJSON defaultOptions ''Status
+deriveJSON defaultOptions ''BridgeInTx
 
 newtype NamiApi =
   NamiApi JSVal
@@ -140,7 +179,30 @@ deepakBech32 :: Address
 deepakBech32 =
   T.pack "addr_test1qqvyvv446w768jj42wxrh99mpmk5kd2qppst0yma8qesllldkdcxe8fngwj6m2f9uk5k8unf94tzzryz7kujnnew29xse6rxsu"
 
-pay :: MonadJSM m => NamiApi -> Address -> Address -> Ada -> m ()
+{-
+TxHash comes from wallet, but may be waiting to hit a mempool
+-- TODO Then it hits the mempool of the node
+TxWaiting for confirmations (with waiting confirmations)
+Locked
+-}
+
+data NamiError
+  = UserDeclined
+  | TxSendFailure
+  deriving (Eq, Show)
+
+data BridgeRequest =
+  BridgeRequest { bridgeRequestAmount :: Double
+                , bridgeRequestTo :: CKBAddress
+                }
+
+doPay :: MonadJSM m => NamiApi -> Address -> BridgeRequest -> m (Either NamiError BridgeInTx)
+doPay napi from (BridgeRequest amount to) = do
+  result <- pay napi from deepakBech32 amount
+  utc <- liftIO $ getCurrentTime
+  pure $ fmap (\txHash -> BridgeInTx amount to txHash LockSubmitted utc) result
+
+pay :: MonadJSM m => NamiApi -> Address -> Address -> Ada -> m (Either NamiError TxHash)
 pay napi from to ada = liftJSM $ do
   tbuild <- newTransactionBuilder
   clog tbuild
@@ -164,13 +226,20 @@ pay napi from to ada = liftJSM $ do
   emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
   tbody <- tbuild ^. js0 "build"
   unsignedTx <- transactionCbor tbody emptyWitnesses
-  witnesses <- signTx napi unsignedTx
+  witnessesResult <- signTx napi unsignedTx
+  case witnessesResult of
+     Left err -> pure $ Left err
+     Right witnesses -> do
+       signedTx <- transactionCbor tbody witnesses
 
-  signedTx <- transactionCbor tbody witnesses
+       clog signedTx
 
-  hash <- submitTx napi signedTx
-
-  pure ()
+       hash <- submitTx napi signedTx
+       case hash of
+         Nothing -> do
+           pure $ Left TxSendFailure
+         Just h ->
+           Right <$> fromJSValUnchecked h
   where
     lovelace = toLovelace ada
 
@@ -192,11 +261,12 @@ type Transaction = JSVal
 type TransactionWitnessSet = JSVal
 type TransactionHash = JSVal
 
-signTx :: MonadJSM m => NamiApi -> Transaction -> m TransactionWitnessSet
+signTx :: MonadJSM m => NamiApi -> Transaction -> m (Either NamiError TransactionWitnessSet)
 signTx napi txn = liftJSM $ do
   emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
   promise <- napi ^. js1 "signTx" txn
-  maybe emptyWitnesses id <$> promiseMaybe (unsafeToPromise promise) transactionFromBytes
+  handlePromise (unsafeToPromise promise) transactionFromBytes (const $ pure $ UserDeclined)
+  -- Right . maybe emptyWitnesses id <$> promiseMaybe (unsafeToPromise promise) transactionFromBytes
 
 submitTx :: MonadJSM m => NamiApi -> Transaction -> m (Maybe TransactionHash)
 submitTx napi txn = liftJSM $ do
@@ -293,3 +363,22 @@ testWasm :: MonadJSM m => m ()
 testWasm = liftJSM $ do
   _ <- eval "console.log(CardanoWasm)"
   pure ()
+
+writeTxs :: MonadJSM m => Map TxHash BridgeInTx -> m ()
+writeTxs txns = liftJSM $ do
+  storage <- jsg "localStorage"
+  _ <- storage ^. js2 "setItem" "txns" (decodeUtf8 $ LBS.toStrict $ Aeson.encode txns)
+  pure ()
+
+updateTx :: MonadJSM m => BridgeInTx -> m ()
+updateTx bin = do
+  txs <- readTxs
+  writeTxs $ Map.update (const $ Just bin) (bridgeInTxHash bin) txs
+
+readTxs :: MonadJSM m => m (Map TxHash BridgeInTx)
+readTxs = liftJSM $ do
+  storage <- jsg "localStorage"
+  transactions <- storage ^. js1 "getItem" "txns" >>= fromJSValUnchecked
+  case Aeson.decode $ LBS.fromStrict $ encodeUtf8 transactions of
+    Just t -> pure t
+    Nothing -> pure mempty
