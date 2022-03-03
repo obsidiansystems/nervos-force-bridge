@@ -33,6 +33,7 @@ import Language.Javascript.JSaddle ( eval
 
                                    , fromJSValUnchecked
                                    , fromJSVal
+                                   , isNull
 
                                    , js
                                    , jsg
@@ -381,9 +382,14 @@ readTxs = liftJSM $ do
   clog "Starting read"
   storage <- jsg "localStorage"
   clog storage
-  transactions <- storage ^. js1 "getItem" "txns" >>= fromJSVal
-  clog transactions
-  clog "Done read"
-  case Aeson.decode . LBS.fromStrict . encodeUtf8 =<< transactions of
-    Just t -> pure t
-    Nothing -> pure mempty
+  rawVal <- storage ^. js1 "getItem" "txns"
+  bNull <- ghcjsPure $ isNull rawVal
+  case bNull of
+    True -> pure mempty
+    False -> do
+      transactions <- fromJSVal rawVal
+      clog transactions
+      clog "Done read"
+      case Aeson.decode . LBS.fromStrict . encodeUtf8 =<< transactions of
+        Just t -> pure t
+        Nothing -> pure mempty
