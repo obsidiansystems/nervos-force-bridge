@@ -6,6 +6,9 @@ module.exports = {
         path: __dirname + '/dist',
         filename: "app.bundle.js"
     },
+    optimization: {
+        minimize: false
+    },
     experiments: {
         asyncWebAssembly: true
     },
