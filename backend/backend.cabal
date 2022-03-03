@@ -31,6 +31,11 @@ library
     Backend
   other-modules:
     CKB
+    CKB.Types
+    CKB.RPC
+    CKB.Capsule
+    CKB.Config
+    Backend.Utils
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
 
 executable backend
