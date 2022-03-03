@@ -32,6 +32,7 @@ import Language.Javascript.JSaddle ( eval
                                    , ToJSVal
 
                                    , fromJSValUnchecked
+                                   , fromJSVal
 
                                    , js
                                    , jsg
@@ -378,7 +379,9 @@ updateTx bin = do
 readTxs :: MonadJSM m => m (Map TxHash BridgeInTx)
 readTxs = liftJSM $ do
   storage <- jsg "localStorage"
-  transactions <- storage ^. js1 "getItem" "txns" >>= fromJSValUnchecked
-  case Aeson.decode $ LBS.fromStrict $ encodeUtf8 transactions of
+  transactions <- storage ^. js1 "getItem" "txns" >>= fromJSVal
+  clog transactions
+  clog "Done read"
+  case Aeson.decode . LBS.fromStrict . encodeUtf8 =<< transactions of
     Just t -> pure t
     Nothing -> pure mempty
