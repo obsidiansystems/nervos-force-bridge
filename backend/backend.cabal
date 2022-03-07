@@ -30,12 +30,7 @@ library
                , bytestring
                , containers
                , freer-extras
-               , plutus-contract
                , lens
-               , plutus-ledger-constraints
-               , plutus-tx-plugin
-               , plutus-tx
-               , plutus-ledger
   exposed-modules:
     Backend
   other-modules:
