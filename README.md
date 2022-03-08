@@ -1,6 +1,6 @@
 # Force Bridge
 
-## Getting Started
+## Quick Start
 
 ### Install Obelisk
 
@@ -24,8 +24,36 @@ These binary caches can be added to your Nix configuration by following the dire
 
 ### Running the project
 
-To run force-bridge, the ui, and nodes:
+To run force-bridge in rapid development mode do
 
 ```bash
 ob run
 ```
+
+This will run the frontend (available at http://localhost:8000), the backend and any nodes specified to run (which can be done in Backend.hs).
+
+You will see in the terminal where `ob run` is executed any errors, warning or other output from: Compilation, services and nodes. 
+
+For nodes any required setup is done once and then re-used throughout development in a node related directory like ckb or cardano and is unique to each node, it may involve running a test/dev node, creating/funding accounts, doing initial transfers, healthchecking, and caching those results making them available to the application.
+
+To recreate these nodes simply delete the node folder.
+
+### Development
+
+When running the project in rapid development mode: `ob run`
+
+Changes to the static folder will cause a nix-build of the static assets in the background. 
+
+Any changes to haskell code or files referenced from the haskell code will cause a hot reload.
+
+#### Updating and working on dependencies
+
+To work on dependencies (like libraries) you can locate the thunk in the deps folder and unpack via `nix-thunk` or `ob thunk`
+
+You can find nix-thunk (here)[https://github.com/obsidiansystems/nix-thunk]
+
+Simply unpack the thunk via `nix-thunk unpack <thunk>` or `ob thunk unpack <thunk>` and this will be pulled into the rapid development
+workflow giving you realtime feedback on whatever dependency you are working on.
+
+You can then commit, upstream and repack the thunk with `nix-thunk pack <thunk>` or `ob thunk pack <thunk>`
+
