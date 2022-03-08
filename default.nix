@@ -72,7 +72,12 @@ in with pkgs.haskell.lib; {
         dependent-monoidal-map = haskellLib.doJailbreak super.dependent-monoidal-map;
         entropy = self.callCabal2nix "entropy" sources.entropy {};
         ghcjs-dom = self.callHackage "ghcjs-dom" "0.9.5.0" {};
-        jsaddle-dom = self.callHackage "jsaddle-dom" "0.9.5.0" {};
+        jsaddle-dom = haskellLib.doJailbreak(self.callHackage "jsaddle-dom" "0.9.5.0" {});
+        lens = haskellLib.doJailbreak(self.callHackage "lens" "5.1" {});
+        vector = haskellLib.doJailbreak(self.callHackage "vector" "0.12.3.1" {});
+        optics-core = haskellLib.doJailbreak(self.callHackage "optics-core" "0.4" {});
+        optics-th = haskellLib.doJailbreak(self.callHackage "optics-th" "0.4" {});
+        th-abstraction = self.callHackage "th-abstraction" "0.4.3.0" {};
         ghcjs-dom-jsffi = self.callHackage "ghcjs-dom-jsffi" "0.9.5.0" {};
         ghcjs-dom-jsaddle = self.callHackage "ghcjs-dom-jsaddle" "0.9.5.0" {};
         validation-selective = haskellLib.doJailbreak super.validation-selective;

@@ -38,7 +38,7 @@ in self: super: {
   byron-spec-ledger = haskellLib.dontCheck (haskellLib.doJailbreak (self.callCabal2nix "byron-spec-ledger" (deps.cardano-ledger + "/eras/byron/ledger/executable-spec") {}));
   cardano-data = haskellLib.dontCheck (self.callCabal2nix "cardano-data" (deps.cardano-ledger + "/libs/cardano-data") {});
   set-algebra = haskellLib.dontCheck (self.callCabal2nix "set-algebra" (deps.cardano-ledger + "/libs/set-algebra") {});
-  compact-map = haskellLib.dontCheck (self.callCabal2nix "compact-map" (deps.cardano-ledger + "/libs/compact-map") {});
+  compact-map = self.callCabal2nix "compact-map" (deps.cardano-ledger + "/libs/compact-map") {};
   cardano-crypto-wrapper = haskellLib.dontCheck (self.callCabal2nix "cardano-crypto-wrapper" (deps.cardano-ledger + "/eras/byron/crypto") {});
   cardano-crypto-test = haskellLib.doJailbreak (haskellLib.dontCheck (self.callCabal2nix "cardano-crypto-test" (deps.cardano-ledger + "/eras/byron/crypto/test") {}));
   # deprecated
