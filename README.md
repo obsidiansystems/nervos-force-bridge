@@ -1,6 +1,6 @@
 # Force Bridge
 
-## Quick Start
+## Getting Started
 
 ### Install Obelisk
 
