@@ -12,7 +12,7 @@ module Promise ( Promise
 import Control.Lens
 import Control.Concurrent
 import Control.Monad.IO.Class (liftIO)
-import Language.Javascript.JSaddle (JSVal
+import Language.Javascript.JSaddle ( JSVal
                                    , MakeObject
                                    , JSM
                                    , js1
@@ -29,8 +29,8 @@ unsafeToPromise = UnsafeToPromise
 handlePromise :: Promise -> (JSVal -> JSM b) -> (JSVal -> JSM a) -> JSM (Either a b)
 handlePromise (UnsafeToPromise val) thenHandler catchHandler = do
   mvar <- liftIO $ newEmptyMVar
-  _ <- val ^. js1 "then" (fun $ \_ _ [v] -> thenHandler v >>= liftIO . putMVar mvar . Right)
-  _ <- val ^. js1 "catch" (fun $ \_ _ [err] -> catchHandler err >>= liftIO . putMVar mvar . Left)
+  nextVal <- val ^. js1 "then" (fun $ \_ _ [v] -> thenHandler v >>= liftIO . putMVar mvar . Right)
+  _ <- nextVal ^. js1 "catch" (fun $ \_ _ [err] -> catchHandler err >>= liftIO . putMVar mvar . Left)
   liftIO $ takeMVar mvar
 
 promiseMaybe :: Promise -> (JSVal -> JSM a) -> JSM (Maybe a)

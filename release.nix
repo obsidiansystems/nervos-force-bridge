@@ -1,9 +1,13 @@
+{ self ? import ./.
+, supportedSystems ? ["x86_64-linux"]
+}:
 let
-  this = import ./. {};
-in {
-  inherit (this) exe;
-  inherit (this.shells) ghc;
-  inherit (this.ghc) backend;
-  inherit (this.ghc) frontend;
-  inherit (this.ghc) common;
-}
+  native-reflex-platform = (self {}).reflex;
+  inherit (native-reflex-platform.nixpkgs) lib;
+
+  perPlatform = lib.genAttrs supportedSystems (system: lib.recurseIntoAttrs {
+    inherit (self { inherit system; }) exe;
+    inherit (self { inherit system; }) ghcjs;
+    inherit ((self { inherit system; }).shells) ghc;
+  });
+in lib.recurseIntoAttrs perPlatform

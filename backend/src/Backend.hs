@@ -12,21 +12,29 @@ import System.Directory
 
 import System.IO (print)
 import Control.Monad.Log
-import Control.Monad.IO.Class (liftIO, MonadIO)
+import Control.Monad.IO.Class ( liftIO
+                              , MonadIO
+                              )
 
 import Prettyprinter (pretty)
-
 import Data.Text as T
 
 import CKB
+import CKB.RPC
+
+import Control.Concurrent
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      runDevelopmentChain "ckb"
+      -- flip runLoggingT (print . renderWithSeverity pretty) $ runDevNode "ckb"
+      {- forkIO $ do
+        -- waitForChain
+        threadDelay 1000000
+        testRPC -}
       -- ckbInitDev
       -- flip runLoggingT (print . renderWithSeverity id) $ do
-      -- logMessage $ WithSeverity Informational (pretty gitPath)
+        -- logMessage $ WithSeverity Informational "Eheheh"
       serve $ const $ return ()
   , _backend_routeEncoder = fullRouteEncoder
   }

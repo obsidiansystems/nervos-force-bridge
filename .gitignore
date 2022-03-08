@@ -15,3 +15,5 @@ tags
 TAGS
 static.out
 /ckb/
+/on-chain/
+*.org

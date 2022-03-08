@@ -17,8 +17,26 @@ library
                , prettyprinter
                , process
                , directory
+               , attoparsec
+               , temporary
+               , tomland
+               , text
+               , obelisk-executable-config-lookup
+               , web3
+               , web3-jsonrpc
+               , web3-provider
+               , cardano-binary
+               , bytestring
+               , aeson
   exposed-modules:
     Backend
+  other-modules:
+    CKB
+    CKB.Types
+    CKB.RPC
+    CKB.Capsule
+    CKB.Config
+    Backend.Utils
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
 
 executable backend
