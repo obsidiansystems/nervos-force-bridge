@@ -5,6 +5,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+{-|
+Description: CKB Types and related paths for executables
+-}
+
 module CKB.Types where
 
 import System.Which
@@ -17,7 +21,6 @@ import qualified Data.Text as T
 
 import Data.Aeson
 import Data.Aeson.TH
-import qualified Data.Aeson.Types as Aeson
 
 import Control.Applicative ((<|>))
 
@@ -49,14 +52,11 @@ deriveJSON defaultOptions ''TestnetAddress
 data Account =
   Account { mainnet_address :: Address
           , testnet_address :: TestnetAddress
-          -- TODO(skylar): Typing for this?
           , lock_arg :: T.Text
-          -- NOTE(skylar): Is Just if it was generated
           , lock_hash :: Maybe T.Text
           }
   deriving (Eq, Show, Generic)
 
--- TODO(skylar): This whole instance can be done less stupid
 instance FromJSON Account where
   parseJSON = withObject "Account" $ \v ->
     Account <$> v .: "mainnet"
@@ -72,7 +72,6 @@ instance ToJSON Account where
            , "lock_hash" .= lh
            ]
 
--- TODO(skylar): Does this make sense
 data Capacity = Capacity
    { total :: CKBytes
    }
@@ -83,16 +82,15 @@ instance FromJSON Capacity where
     Capacity <$> v .: "total"
 
 -- NOTE(skylar): Stored in Shannons
--- TODO(skylar): Do we wanna store this in Shannons?
 newtype CKBytes =
   CKBytes { unCKBytes :: Int }
-  deriving (Eq, Show, Num, Ord)
+  deriving (Eq, Show, Ord)
 
 instance FromJSON CKBytes where
   parseJSON = withText "CKBytes" $ \t -> do
     case parseOnly ckbytes t of
       Right b -> pure b
-      Left err ->
+      Left _ ->
         fail "Parsing CKBytes failed"
 
 account :: Parser Account
@@ -101,14 +99,13 @@ account = do
     <$> (Address <$> mainnet)
     <*> (TestnetAddress <$> testnet)
     <*> addr "lock_arg"
-    -- TODO(skylar): There must be a better way to express this
     <*> ((Just <$> addr "lock_hash") <|> pure Nothing)
   where
     addr t = do
-      A.takeTill isEndOfLine
+      _ <- A.takeTill isEndOfLine
       endOfLine
       skipMany space
-      string $ t <> ":"
+      _ <- string $ t <> ":"
       skipSpace
       takeTill isEndOfLine
 
@@ -119,15 +116,13 @@ ckbytes :: Parser CKBytes
 ckbytes = do
   n <- double
   skipMany space
-  string "(CKB)"
+  _ <- string "(CKB)"
   pure $ CKBytes $ truncate $ n * 100000000
   where
 
 
--- TODO(skylar): Split this out into another place
 procCli :: MonadIO m => FilePath -> [String] -> m CreateProcess
 procCli ckbCliDir args = liftIO $ do
-  -- absoluteDir <- makeAbsolute ckbCliDir
   pure
     $ addEnvironmentVariable ("CKB_CLI_HOME", ckbCliDir)
     $ proc ckbCliPath args

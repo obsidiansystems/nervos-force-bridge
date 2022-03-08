@@ -1,17 +1,9 @@
 { pkgs ? import <nixpkgs> {}
-# , capsule ? import ./nix/capsule {}
-# , ckb-cli ? import ./nix/ckb-cli {}
 }:
 
 let
-  # TODO(skylar): What do we strip from here...
-  # To use this shell.nix on NixOS your user needs to be part of the podman group
-  # and have the podman daemon enabled via configuration.nix virtualisation.podman.enable = true;
-
   nix-thunk = import ./deps/nix-thunk {};
   sources = nix-thunk.mapSubdirectories nix-thunk.thunkSource ./deps;
-
-  # foldExtensions = lib.foldr lib.composeExtensions (_: _: {});
 
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
