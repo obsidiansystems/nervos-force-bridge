@@ -1,6 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-|
+Description: CKB Chain configuration types
+-}
+
 module CKB.Config where
 
 import CKB.Types
@@ -39,7 +43,7 @@ data ChainSpec =
   deriving (Generic, Show)
 
 data Logger =
-  Logger { filter :: T.Text -- TODO(skylar): This should be an enum probably
+  Logger { filter :: T.Text
          , color :: Bool
          , log_to_file :: Bool
          , log_to_stdout :: Bool
@@ -115,7 +119,6 @@ mkBlockAssembler a =
   magicHash
   (lock_arg a)
   alwaysHashType
-  -- TODO(skylar): What is message for?
   "0x"
   where
     magicHash = "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8"
@@ -124,7 +127,6 @@ mkBlockAssembler a =
 ckbConfigCodec :: TomlCodec CkbConfig
 ckbConfigCodec = genericCodec
 
--- TODO(skylar): This should really be an inline table, but inline tables are just alternative syntax
 instance HasCodec ChainSpec where
   hasCodec = Toml.table genericCodec
 

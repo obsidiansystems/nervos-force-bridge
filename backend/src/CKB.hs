@@ -4,14 +4,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module CKB (runDevNode) where
+{-|
+Description: CKB node running utilities
+-}
+
+module CKB ( runDevNode
+           , waitForCapacity
+           , getTestnetBalance
+           ) where
 
 import Control.Monad
 import Control.Monad.IO.Class
 
 import GHC.Generics
 
-import System.Which
 import System.Process
 import System.Directory
 
@@ -19,10 +25,7 @@ import Data.Bool
 import Data.List (intercalate)
 
 import GHC.IO.Handle
-import Obelisk.Configs
-import qualified Obelisk.ExecutableConfig.Lookup as Lookup
 
-import System.Directory
 import System.IO.Temp
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -35,21 +38,16 @@ import Data.Aeson.TH
 import Control.Concurrent
 import Control.Monad.Log
 
-import Toml.Codec ( TomlCodec
-                  , HasCodec
-                  , genericCodec
-                  )
 import qualified Toml.Codec as Toml
 
 import CKB.Types
 import CKB.Config
-import CKB.Capsule
 
 import Data.Attoparsec.Text as A
 
 import Backend.Utils
 
--- TODO(skylar): Do we need the password for these accounts?
+-- Password for dev node is "hello"
 data DevNode = DevNode
   { devNodeMiner :: Account
   , devNodeGenesis1 :: Account
@@ -59,7 +57,6 @@ data DevNode = DevNode
 
 deriveJSON defaultOptions ''DevNode
 
--- TODO(skylar): How do we handle the working directory
 createNewAccount :: MonadIO m => FilePath -> m Account
 createNewAccount path = liftIO $ do
   cp <- procCli (relativeCkbHome path) ["account", "new"]
@@ -99,7 +96,7 @@ initNewDevNode path = do
   minerAccount <- createNewAccount path
 
   r <- Toml.decodeFile ckbConfigCodec (path <> "/ckb.toml")
-  Toml.encodeToFile ckbConfigCodec (path <> "/ckb.toml") $ r { block_assembler = Just $ mkBlockAssembler minerAccount }
+  _ <- Toml.encodeToFile ckbConfigCodec (path <> "/ckb.toml") $ r { block_assembler = Just $ mkBlockAssembler minerAccount }
 
   genesis1 <- accountFromPrivateKey path genesisPrivateKey1
   genesis2 <- accountFromPrivateKey path genesisPrivateKey2
@@ -110,19 +107,13 @@ initNewDevNode path = do
   liftIO $ Aeson.encodeFile (path <> "/dev-node.json") dn
   pure dn
 
--- TODO(skylar): Where should the logs go!
 runDevNode :: (ForceM m) => FilePath -> m ()
 runDevNode path = do
   liftIO $ createDirectoryIfMissing False path
-  node <- getOrCreateDevNode path
+  _ <- getOrCreateDevNode path
   runChain path
-  -- TODO(skylar): Properly poll/wait for the chain to start
   waitForChain
   runMiner path
-
-  -- deployProject (devNodeGenesis1 node) "on-chain/test-sudt/"
-
-  -- Check deployment and deploy stuff
   pure ()
 
 runChain :: MonadIO m => FilePath -> m ()
@@ -137,17 +128,17 @@ runMiner path = do
 
 getOrCreateDevNode :: ForceM m => FilePath -> m DevNode
 getOrCreateDevNode path = do
-  exists <- liftIO $ doesFileExist file
+  exists <- liftIO $ doesFileExist nodeFile
   case exists of
     True -> do
-      result <- liftIO $ Aeson.decodeFileStrict file
+      result <- liftIO $ Aeson.decodeFileStrict nodeFile
       case result of
         Nothing -> initNewDevNode path
         Just node -> pure node
     False -> do
       initNewDevNode path
   where
-    file = path <> "/dev-node.json"
+    nodeFile = path <> "/dev-node.json"
 
 initDevNode :: MonadIO m => FilePath -> Bool -> m ()
 initDevNode path force = do
@@ -157,7 +148,6 @@ initDevNode path force = do
     $ proc ckbPath ["init", "--chain", "dev", bool "" "--force" force]
   pure ()
 
--- TODO(skylar): How long does it take, or can we query this to ensure that things are good
 waitForChain :: MonadIO m => m ()
 waitForChain = liftIO $ threadDelay 1000000
 
@@ -168,8 +158,6 @@ waitForCapacity a amount = do
     liftIO $ threadDelay $ miliseconds 500
     waitForCapacity a amount
 
--- TODO(skylar): What is the failure state here?
--- TODO(skylar): This should be done via rpc
 getTestnetBalance :: ForceM m => Account -> m CKBytes
 getTestnetBalance ac = do
   let

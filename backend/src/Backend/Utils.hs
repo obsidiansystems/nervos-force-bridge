@@ -1,6 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
+{-|
+Description: Various utility functions for the backend
+-}
+
 module Backend.Utils where
 
 import System.Process
@@ -20,5 +24,4 @@ seconds = (1000000*)
 tShow :: Show a => a -> T.Text
 tShow = T.pack . show
 
--- TODO(skylar): Move this
 type ForceM m = (MonadLog (WithSeverity T.Text) m, MonadIO m)

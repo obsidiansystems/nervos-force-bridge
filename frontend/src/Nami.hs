@@ -7,7 +7,7 @@ module Nami where
 import JSDOM
 import JSDOM.Types (fromJSArrayUnchecked)
 
-import Control.Lens
+import Control.Lens hiding (from, to)
 import Control.Monad.IO.Class
 
 import Promise
@@ -34,6 +34,7 @@ import Language.Javascript.JSaddle ( eval
                                    , fromJSValUnchecked
                                    , fromJSVal
                                    , isNull
+                                   , isUndefined
 
                                    , js
                                    , jsg
@@ -41,12 +42,8 @@ import Language.Javascript.JSaddle ( eval
                                    , js1
                                    , js2
                                    , js3
-                                   , js4
-
-                                   , fun
 
                                    , MakeObject
-                                   , JSVal
                                    , JSM
                                    )
 
@@ -55,7 +52,6 @@ import GHC.Natural
 
 data APIError = APIError String
 type Address = T.Text
-
 
 data Status
   = LockSubmitted
@@ -92,14 +88,16 @@ newtype NamiApi =
   NamiApi JSVal
   deriving (MakeObject)
 
--- TODO(skylar): Currently we don't have overloaded strings so "cardano" is a string
--- but eventually we might need overloaded strings...
-
 getApi :: (MonadJSM m) => m (Either APIError NamiApi)
 getApi = liftJSM $ do
   window <- currentWindowUnchecked
-  promise <- window ^. js "cardano" . js "nami" . js0 "enable"
-  handlePromise (unsafeToPromise promise) (pure . NamiApi) (const $ pure $ APIError "Nami Wallet Not Enabled")
+  cardano <- window ^. js "cardano"
+  cardanoUndefined <- ghcjsPure $ isUndefined cardano
+  case cardanoUndefined of
+    True -> pure $ Left $ APIError "No wallet provider detected"
+    False -> do
+      promise <- window ^. js "cardano" . js "nami" . js0 "enable"
+      handlePromise (unsafeToPromise promise) (pure . NamiApi) (const $ pure $ APIError "Nami Wallet Not Enabled")
 
 getBalance :: MonadJSM m => NamiApi -> m Double
 getBalance napi = liftJSM $ do
@@ -115,30 +113,25 @@ getBalance napi = liftJSM $ do
 getUsedAddress :: (MonadJSM m) => NamiApi -> m (Maybe Address)
 getUsedAddress napi = liftJSM $ do
   promise <- napi ^. js0 "getUsedAddresses"
-  -- TODO(skylar): This is really a MaybeT
   mthing <- promiseMaybe (unsafeToPromise promise) (pure . id)
   case mthing of
     Nothing -> pure Nothing
     Just v -> convert v
   where
-    -- TODO(skylar): This is pretty much [a] -> Maybe a
     convert val = do
       results :: [JSVal] <- fromJSArrayUnchecked val
       case results of
         [addr] -> Just <$> addressFromBytes addr
         _ -> pure Nothing
 
--- TODO(skylar): Merge this with getUsedAddress...
 getChangeAddress :: (MonadJSM m) => NamiApi -> m (Maybe Address)
 getChangeAddress napi = liftJSM $ do
   promise <- napi ^. js0 "getChangeAddress"
-  -- TODO(skylar): This is really a MaybeT
   mthing <- promiseMaybe (unsafeToPromise promise) (pure . id)
   case mthing of
     Nothing -> pure Nothing
     Just v -> convert v
   where
-    -- TODO(skylar): This is pretty much [a] -> Maybe a
     convert val = do
       Just <$> addressFromBytes val
 
@@ -147,7 +140,6 @@ clog a = do
   _ <- jsg "console" ^. js1 "log" a
   pure ()
 
--- TODO(skylar): Newtype this?
 addressFromBytes :: JSVal -> JSM Address
 addressFromBytes v = do
   buffer <- jsg "Buffer" ^. js2 "from" v "hex"
@@ -158,10 +150,8 @@ type UTXO = JSVal
 
 type Ada = Double
 type Lovelace = Integer
--- TODO(skylar): Where does Value get imported, and why is it higher kinded?
 type V = JSVal
 
--- TODO(skylar): Round or floor (or truncate)?
 toLovelace :: Ada -> Lovelace
 toLovelace ada = floor $ ada * 1000000
 
@@ -177,20 +167,14 @@ data TransactionInput =
                    , outputs :: [(Address, Ada)]
                    }
 
-deepakBech32 :: Address
-deepakBech32 =
+testContractAddress :: Address
+testContractAddress =
   T.pack "addr_test1qqvyvv446w768jj42wxrh99mpmk5kd2qppst0yma8qesllldkdcxe8fngwj6m2f9uk5k8unf94tzzryz7kujnnew29xse6rxsu"
-
-{-
-TxHash comes from wallet, but may be waiting to hit a mempool
--- TODO Then it hits the mempool of the node
-TxWaiting for confirmations (with waiting confirmations)
-Locked
--}
 
 data NamiError
   = UserDeclined
   | TxSendFailure
+  | NoChangeAddress
   deriving (Eq, Show)
 
 data BridgeRequest =
@@ -200,12 +184,12 @@ data BridgeRequest =
 
 doPay :: MonadJSM m => NamiApi -> Address -> BridgeRequest -> m (Either NamiError BridgeInTx)
 doPay napi from (BridgeRequest amount to) = do
-  result <- pay napi from deepakBech32 amount
-  utc <- liftIO $ getCurrentTime
-  pure $ fmap (\txHash -> BridgeInTx amount to txHash LockSubmitted utc) result
+  result <- pay napi from testContractAddress amount
+  currTime <- liftIO $ getCurrentTime
+  pure $ fmap (\txHash -> BridgeInTx amount to txHash LockSubmitted currTime) result
 
 pay :: MonadJSM m => NamiApi -> Address -> Address -> Ada -> m (Either NamiError TxHash)
-pay napi from to ada = liftJSM $ do
+pay napi _ to ada = liftJSM $ do
   tbuild <- newTransactionBuilder
   clog tbuild
 
@@ -214,34 +198,33 @@ pay napi from to ada = liftJSM $ do
   mapM_ (addInput tbuild) utxos
 
   output <- newTransactionOutput to ada
-  tbuild ^. js1 "add_output" output
-  -- TODO(skylar): We need to calculate this..
-  tbuild ^. js1 "set_ttl" (52463794 :: Int)
+  _ <- tbuild ^. js1 "add_output" output
+  _ <- tbuild ^. js1 "set_ttl" (52463794 :: Int)
 
   changeAddress <- getChangeAddress napi
   case changeAddress of
-    Nothing -> error ":("
+    Nothing -> pure $ Left NoChangeAddress
     Just addr -> do
       notBech <- cardanoWasm ^. js "Address" . js1 "from_bech32" addr
-      tbuild ^. js1 "add_change_if_needed" notBech
+      _ <- tbuild ^. js1 "add_change_if_needed" notBech
 
-  emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
-  tbody <- tbuild ^. js0 "build"
-  unsignedTx <- transactionCbor tbody emptyWitnesses
-  witnessesResult <- signTx napi unsignedTx
-  case witnessesResult of
-     Left err -> pure $ Left err
-     Right witnesses -> do
-       signedTx <- transactionCbor tbody witnesses
+      emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
+      tbody <- tbuild ^. js0 "build"
+      unsignedTx <- transactionCbor tbody emptyWitnesses
+      witnessesResult <- signTx napi unsignedTx
+      case witnessesResult of
+         Left err -> pure $ Left err
+         Right witnesses -> do
+           signedTx <- transactionCbor tbody witnesses
 
-       clog signedTx
+           clog signedTx
 
-       hash <- submitTx napi signedTx
-       case hash of
-         Nothing -> do
-           pure $ Left TxSendFailure
-         Just h ->
-           Right <$> fromJSValUnchecked h
+           hash <- submitTx napi signedTx
+           case hash of
+             Nothing -> do
+               pure $ Left TxSendFailure
+             Just h ->
+               Right <$> fromJSValUnchecked h
   where
     lovelace = toLovelace ada
 
@@ -257,7 +240,6 @@ transactionFromBytes v = liftJSM $ do
   buffer <- jsg "Buffer" ^. js2 "from" v "hex"
   jsg "CardanoWasm" ^. js "TransactionWitnessSet" . js1 "from_bytes" buffer
 
--- IMPORTANT TODO(skylar): This is like cbor hex or someshit
 type TxBody = JSVal
 type Transaction = JSVal
 type TransactionWitnessSet = JSVal
@@ -265,10 +247,8 @@ type TransactionHash = JSVal
 
 signTx :: MonadJSM m => NamiApi -> Transaction -> m (Either NamiError TransactionWitnessSet)
 signTx napi txn = liftJSM $ do
-  emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
   promise <- napi ^. js1 "signTx" txn
   handlePromise (unsafeToPromise promise) transactionFromBytes (const $ pure $ UserDeclined)
-  -- Right . maybe emptyWitnesses id <$> promiseMaybe (unsafeToPromise promise) transactionFromBytes
 
 submitTx :: MonadJSM m => NamiApi -> Transaction -> m (Maybe TransactionHash)
 submitTx napi txn = liftJSM $ do
@@ -319,20 +299,14 @@ newTransactionBuilder = liftJSM $ do
   clog cfg
   cardanoWasm ^. js "TransactionBuilder" . js1 "new" cfg
 
--- TODO(skylar): Do we even want this format here?
--- TODO(skylar): What is this naming?
 type TransactionOutput = JSVal
 
--- TODO(skylar): Types
 cardanoWasm :: JSM JSVal
 cardanoWasm = jsg "CardanoWasm"
 
 newTransactionOutput :: MonadJSM m => Address -> Ada -> m TransactionOutput
 newTransactionOutput bech32 ada = liftJSM $ do
-
   addr <- cardanoWasm ^. js "Address" . js1 "from_bech32" bech32
-
-  -- TODO(skylar): Can we do this without the show??
   amount <- newBigNum $ show lovelace
   val <- cardanoWasm ^. js "Value" . js1 "new" amount
 
@@ -342,7 +316,7 @@ newTransactionOutput bech32 ada = liftJSM $ do
     lovelace = toLovelace ada
 
 getUtxos :: MonadJSM m => NamiApi -> Maybe V -> m [UTXO]
-getUtxos napi mv = liftJSM $ do
+getUtxos napi _ = liftJSM $ do
   promise <- napi ^. js0 "getUtxos"
   list :: Maybe [JSVal] <- promiseMaybe (unsafeToPromise promise) (fromJSValUnchecked)
   results <- mapM toUTXO $ maybe [] id list

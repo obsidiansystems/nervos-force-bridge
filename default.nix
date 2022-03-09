@@ -78,29 +78,12 @@ in with pkgs.haskell.lib; {
         ghcjs-dom-jsaddle = self.callHackage "ghcjs-dom-jsaddle" "0.9.5.0" {};
         validation-selective = haskellLib.doJailbreak super.validation-selective;
         tomland = haskellLib.doJailbreak super.tomland;
-        # TODO(skylar): This may not even be needed cause of cardano-binary
-        hexstring = self.callCabal2nix "hexstring" sources.haskell-hexstring {};
-        # base16-bytestring = self.callHackage "base16-bytestring" "0.1.1.7" {};
-        # cryptohash-md5 = dontCheck super.cryptohash-md5;
-        # base16-bytestring = self.callHackage "base16-bytestring" "1.0.0.0" {};
-        # cardano-prelude = enableCabalFlag (doJailbreak super.cardano-prelude) "development";
-          # disableCabalFlag "-Wall"
-        # canonical-json = dontCheck (markUnbroken (self.callHackage "canonical-json" "0.6.0.0" {}));
-        # nothunks = dontCheck (self.callHackage "nothunks" "0.1.3" {});
 
-        # TODO: Should we use callHackageDirect instead?
-        # NOTE: These are all for hs-web3
-        # microlens-mtl = self.callHackage "microlens-mtl" "0.2.0.1" {};
-        # basement = self.callHackage "basement" "0.0.11" {};
-        # base-orphans = doJailbreak super.base-orphans;
-        # hashable = doJailbreak super.hashable;
-        # "OneTuple" = doJailbreak super."OneTuple";
+        hexstring = self.callCabal2nix "hexstring" sources.haskell-hexstring {};
         base-orphans = self.callHackage "base-orphans" "0.8.6" {};
         hashable = self.callHackage "hashable" "1.3.5.0" {};
         time-compat = dontCheck super.time-compat;
-          # self.callHackage "time-compat" "1.9"
-        # base-orphans = self.callHackage "base-orphans" "0.8.6" {};
-        # base-orphans = self.callHackage "base-orphans" {};
+
         OneTuple = doJailbreak super.OneTuple;
         generics-sop = doJailbreak super.generics-sop;
         wss-client = dontCheck (markUnbroken super.wss-client);
@@ -112,10 +95,10 @@ in with pkgs.haskell.lib; {
         web3-solidity = doJailbreak (dontCheck super.web3-solidity);
         web3-ethereum-core = doJailbreak (dontCheck super.web3-ethereum-core);
         web3-ethereum = doJailbreak (dontCheck super.web3-ethereum);
-          # doJailbreak (self.callCabal2nix "web3-solidity" (sources.hs-web3 + "/packages/solidity") {});
-          # doJailbreak super.web3-solidity;
+
         # web3-ethereum dependency
         relapse = dontCheck (markUnbroken super.relapse);
+
         # This jailbreak has a suspicious type warning
         singletons = self.callHackage "singletons" "3.0.1" {};
         vinyl = dontCheck (doJailbreak (markUnbroken super.vinyl));
