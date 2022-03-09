@@ -146,7 +146,7 @@ in self: super: {
 
   # other misc
   aeson = self.callCabal2nix "aeson" deps.aeson {}; # 1.5.6.0
-  openapi3 = haskellLib.doJailbreak (self.callHackage "openapi3" "3.1.0" {});
+  openapi3 = null; # haskellLib.dontCheck (haskellLib.doJailbreak (self.callHackage "openapi3" "3.2.0" {}));
   servant-openapi3 = haskellLib.doJailbreak (self.callHackage "servant-openapi3" "2.0.1.2" {});
   servant = self.callHackage "servant" "0.18.3" {};
   servant-client = self.callHackage "servant-client" "0.18.3" {};
@@ -167,7 +167,7 @@ in self: super: {
   # tests are not compatible with base16-bytestring 1.x
   cryptohash-sha1 = haskellLib.dontCheck super.cryptohash-sha1;
   # tests are not compatible with base16-bytestring 1.x
-  monoidal-containers = haskellLib.dontCheck super.monoidal-containers;
+  monoidal-containers = haskellLib.dontCheck (haskellLib.doJailbreak super.monoidal-containers);
   witherable = self.callHackage "witherable" "0.4" {};
   indexed-traversable = self.callHackage "indexed-traversable" "0.1.1" {};
   # QuickCheck constraints

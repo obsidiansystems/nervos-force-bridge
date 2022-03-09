@@ -31,6 +31,8 @@ library
                , containers
                , freer-extras
                , lens
+               , cardano-crypto-class
+               , ouroboros-consensus-shelley
                , plutus-ledger
   exposed-modules:
     Backend
