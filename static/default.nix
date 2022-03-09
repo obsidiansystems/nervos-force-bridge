@@ -14,6 +14,7 @@ in pkgs.stdenv.mkDerivation {
     set -euo pipefail
     mkdir -p $out/css
     mkdir -p $out/js
+    # mkdir -p $out/svgs
     # mkdir -p $out/images
 
     # Setting up the node environment:
@@ -36,5 +37,7 @@ in pkgs.stdenv.mkDerivation {
     # cp -r images/* $out/images/
 
     cp ./favicon.ico $out/
+
+    # cp -r svgs/* $out/svgs/
   '';
 }
