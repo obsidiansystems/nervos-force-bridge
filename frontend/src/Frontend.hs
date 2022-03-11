@@ -200,12 +200,7 @@ frontend = Frontend
 
           pure $ changeBridgeDirection <$ domEvent Click buttonEl
 
-      elClass "div" "p-4 group-scoped bg-yellow-200" $ do
-        elClass "span" "group-scoped-hover:underline" $ text "Hello world"
-        elClass "div" "p-4 group-scoped bg-yellow-400" $ do
-          elClass "span" "group-scoped-hover:underline" $ text "Hello world"
 
-  
       elClass "div" "flex bg-gradient-to-br from-tertiary to-tertiary-end flex-grow justify-center items-center pt-36 pb-8" $ prerender_ blank $ do
         eApi <- liftJSM $ Nami.getApi
         case eApi of
@@ -222,12 +217,12 @@ frontend = Frontend
                                 \ break-all invisible group-hover:visible text-left" $ do
                     elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
 
-                    elClass "span" "relative ml-1" $ do
+                    elClass "span" "group-one relative ml-1" $ do
                       elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
-                                \ break-all invisible peer-hover:visible text-left" $ do
+                                \ invisible group-one-hover:visible text-left" $ do
                         el "span" $ text "Copy"
 
-                      elClass "span" "peer" copySvg
+                      elClass "span" "" copySvg
 
                   el "div" $ text $ truncateMiddleText result truncateLength
 
