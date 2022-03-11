@@ -16,8 +16,15 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Language.Javascript.JSaddle ( eval
                                    , liftJSM
+                                   , toJSVal
+                                   , maybeNullOrUndefined
                                    , MonadJSM
+                                   , ToJSVal
+                                   , JSVal
+                                   , JSM
+                                   , jsg
                                    , js
+                                   , js1
                                    )
 
 import JSDOM
@@ -35,7 +42,7 @@ import qualified Reflex.Dom.Widget.SVG as S
 import Reflex.Dom.Widget.SVG.Types (SVG_Rect)
 import qualified Reflex.Dom.Widget.SVG.Types as S
 import qualified Reflex.Dom.Widget.SVG.Types.SVG_Path as S
-import Control.Lens ((^?), (+~), (?~), (#), from, at, _Wrapped)
+import Control.Lens ((^?), (+~), (?~), (#), (^.), from, at, _Wrapped)
 import Data.Function ((&))
 import Data.Monoid (mempty, mappend)
 import Reflex (Dynamic)
@@ -60,33 +67,45 @@ changeBridgeDirection BridgeIn = BridgeOut
 changeBridgeDirection BridgeOut = BridgeIn
 
 fbSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
-fbSvg = elAttr "img" ("src" =: $(static "svgs/forcebridgeLogo.svg") <> "height" =: "30px" <> "width" =: "30px") blank
+fbSvg = elAttr "img" ("src" =: $(static "svgs/forcebridgeLogo.svg") <> "class" =: "w-svg-logo h-svg-logo") blank
+
+svgClass = "w-svg h-svg inline"
 
 nervosSvg :: (PostBuild t m, DomBuilder t m) => m ()
-nervosSvg = elAttr "img" ("src" =: $(static "svgs/nervos.svg") <> "height" =: "30px" <> "width" =: "30px"
-               <> "class" =: "inline") blank
+nervosSvg = elAttr "img" ("src" =: $(static "svgs/nervos.svg") <> "class" =: svgClass) blank
 
 cardanoSvg :: (PostBuild t m, DomBuilder t m) => m ()
-cardanoSvg = elAttr "img" ("src" =: $(static "svgs/cardano.svg") <> "height" =: "30px" <> "width" =: "30px"
-               <> "class" =: "inline") blank
+cardanoSvg = elAttr "img" ("src" =: $(static "svgs/cardano.svg") <> "class" =: svgClass) blank
 
 filledCircleArrowSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
-filledCircleArrowSvg = elAttr "img" ("src" =: $(static "svgs/filledCircleArrow.svg") <> "height" =: "30px" <> "width" =: "30px") blank
+filledCircleArrowSvg = elAttr "img" ("src" =: $(static "svgs/filledCircleArrow.svg") <> "class" =: "w-svg-lg h-svg-lg") blank
 
 arrowSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
-arrowSvg = elAttr "img" ("src" =: $(static "svgs/arrow.svg") <> "height" =: "30px" <> "width" =: "30px"
-                        <> "class" =: "inline") blank
+arrowSvg = elAttr "img" ("src" =: $(static "svgs/arrow.svg") <> "class" =: svgClass) blank
+
 menuSvg :: (PostBuild t m, DomBuilder t m) => m ()
-menuSvg = elAttr "img" ("src" =: $(static "svgs/menu.svg") <> "height" =: "14px" <> "width" =: "14px"
-                        <> "class" =: "inline") blank
+menuSvg = elAttr "img" ("src" =: $(static "svgs/menu.svg") <> "class" =: svgClass) blank
 
 copySvg :: (PostBuild t m, DomBuilder t m) => m ()
-copySvg = elAttr "img" ("src" =: $(static "svgs/copy.svg") <> "height" =: "14px" <> "width" =: "14px"
-                        <> "class" =: "inline") blank
+copySvg = elAttr "img" ("src" =: $(static "svgs/copy.svg") <> "class" =: svgClass) blank
 
 greenCheckmarkSvg :: (PostBuild t m, DomBuilder t m) => m ()
-greenCheckmarkSvg = elAttr "img" ("src" =: $(static "svgs/greenCheckmark.svg") <> "height" =: "14px" <> "width" =: "14px"
-                        <> "class" =: "inline") blank
+greenCheckmarkSvg = elAttr "img" ("src" =: $(static "svgs/greenCheckmark.svg") <> "class" =: svgClass) blank
+
+copyToClipboard :: MonadJSM m => T.Text -> m ()
+copyToClipboard addr = liftJSM $ do
+
+  navJSVal <- jsg ("navigator" :: T.Text)
+  mNavigator <- maybeNullOrUndefined navJSVal
+
+  case mNavigator of
+    Nothing -> pure ()
+    Just nav -> do
+      nav ^. js ("clipboard" :: T.Text) . js1 ("writeText" :: T.Text) addr
+      pure ()
+
+  pure ()
+
 
 class Pretty a where
   pretty :: a -> T.Text
@@ -213,16 +232,27 @@ frontend = Frontend
                             \ rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
                 Nothing -> text "Loading wallet"
                 Just result -> do
-                  elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
-                                \ break-all invisible group-hover:visible text-left" $ do
-                    elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
+                  let copiedText True = "Copied"
+                      copiedText _ = "Copy"
+                      copiedSvg True = greenCheckmarkSvg
+                      copiedSvg _ = copySvg
 
-                    elClass "span" "group-one relative ml-1" $ do
-                      elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
-                                \ invisible group-one-hover:visible text-left" $ do
-                        el "span" $ text "Copy"
+                  rec
+                    bCopiedAddr <- foldDyn (||) False copyAddrEvent
 
-                      elClass "span" "" copySvg
+                    copyAddrEvent <- elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                                                   \ break-all invisible group-hover:visible text-left" $ do
+                      elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
+
+                      elClass "span" "group-one relative ml-1" $ do
+                        elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                                      \ invisible group-one-hover:visible text-left" $ do
+                          elClass "div" "break-normal" $ dynText $ copiedText <$> bCopiedAddr
+
+                        (copyBtn, _) <- elClass' "button" "" $ dyn_ $ copiedSvg <$> bCopiedAddr
+
+                        performEvent_ $ copyToClipboard result <$ domEvent Click copyBtn
+                        pure $ True <$ domEvent Click copyBtn
 
                   el "div" $ text $ truncateMiddleText result truncateLength
 
@@ -230,7 +260,7 @@ frontend = Frontend
               amount <- fmap join $ holdDyn (pure Nothing) amountThing
 
               ckbAddress <- elClass "div" "border rounded-lg p-4 mb-4" $ do
-                elClass "div" "text-bold" $ text "input address"
+                elClass "div" "text-bold" $ text "Recipient:"
                 ie <- inputElement $ def
                   & initialAttributes .~ ("placeholder" =: "enter your ckb address"
                                         <> "class" =: "focus:outline-none text-gray-700"

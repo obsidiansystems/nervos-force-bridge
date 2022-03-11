@@ -913,13 +913,13 @@ let
         sha512 = "+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==";
       };
     };
-    "electron-to-chromium-1.4.81" = {
+    "electron-to-chromium-1.4.82" = {
       name = "electron-to-chromium";
       packageName = "electron-to-chromium";
-      version = "1.4.81";
+      version = "1.4.82";
       src = fetchurl {
-        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.81.tgz";
-        sha512 = "Gs7xVpIZ7tYYSDA+WgpzwpPvfGwUk3KSIjJ0akuj5XQHFdyQnsUoM76EA4CIHXNLPiVwTwOFay9RMb0ChG3OBw==";
+        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.82.tgz";
+        sha512 = "Ks+ANzLoIrFDUOJdjxYMH6CMKB8UQo5modAwvSZTxgF+vEs/U7G5IbWFUp6dS4klPkTDVdxbORuk8xAXXhMsWw==";
       };
     };
     "emojis-list-3.0.0" = {
@@ -2391,7 +2391,7 @@ let
       sources."detective-5.2.0"
       sources."didyoumean-1.2.2"
       sources."dlv-1.1.3"
-      sources."electron-to-chromium-1.4.81"
+      sources."electron-to-chromium-1.4.82"
       sources."emojis-list-3.0.0"
       sources."enhanced-resolve-5.9.2"
       sources."envinfo-7.8.1"

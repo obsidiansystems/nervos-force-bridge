@@ -2,8 +2,21 @@ module.exports = {
   content: ['./frontend/**/*.hs'],
   theme: {
     extend: {
+      fontFamily: {
+        'sans': ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen',
+                 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                 'sans-serif'],
+      },
       width: {
         '90' : '360px',
+        'svg' : '14px',
+        'svg-lg' : '24px',
+        'svg-logo' : '62px',
+      },
+      height: {
+        'svg' : '14px',
+        'svg-lg' : '24px',
+        'svg-logo' : '32px',
       },
       colors: {
         primary: {
