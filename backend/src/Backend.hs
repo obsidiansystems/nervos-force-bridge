@@ -28,14 +28,6 @@ import Control.Concurrent
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      --flip runLoggingT (print . renderWithSeverity pretty) $ runDevNode "ckb"
-      {- forkIO $ do
-        -- waitForChain
-        threadDelay 1000000
-        testRPC -}
-      -- ckbInitDev
-      -- flip runLoggingT (print . renderWithSeverity id) $ do
-        -- logMessage $ WithSeverity Informational "Eheheh"
       serve $ const $ return ()
   , _backend_routeEncoder = fullRouteEncoder
   }

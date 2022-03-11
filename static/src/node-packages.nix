@@ -202,13 +202,13 @@ let
         sha512 = "TmKSNO4D5rzhL5bjWFcVHHLETzfQ/AmbKpKPOSjlP0WoHZ6L911fgoOKY4Alp/emzG4cHJdyN49zpgkbXFEHHw==";
       };
     };
-    "@discoveryjs/json-ext-0.5.6" = {
+    "@discoveryjs/json-ext-0.5.7" = {
       name = "_at_discoveryjs_slash_json-ext";
       packageName = "@discoveryjs/json-ext";
-      version = "0.5.6";
+      version = "0.5.7";
       src = fetchurl {
-        url = "https://registry.npmjs.org/@discoveryjs/json-ext/-/json-ext-0.5.6.tgz";
-        sha512 = "ws57AidsDvREKrZKYffXddNkyaF14iHNHm8VQnZH6t99E8gczjNN0GpvcGny0imC80yQ0tHz1xVUKk/KFQSUyA==";
+        url = "https://registry.npmjs.org/@discoveryjs/json-ext/-/json-ext-0.5.7.tgz";
+        sha512 = "dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==";
       };
     };
     "@emurgo/cardano-serialization-lib-browser-10.0.4" = {
@@ -913,13 +913,13 @@ let
         sha512 = "+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==";
       };
     };
-    "electron-to-chromium-1.4.78" = {
+    "electron-to-chromium-1.4.81" = {
       name = "electron-to-chromium";
       packageName = "electron-to-chromium";
-      version = "1.4.78";
+      version = "1.4.81";
       src = fetchurl {
-        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.78.tgz";
-        sha512 = "o61+D/Lx7j/E0LIin/efOqeHpXhwi1TaQco9vUcRmr91m25SfZY6L5hWJDv/r+6kNjboFKgBw1LbfM0lbhuK6Q==";
+        url = "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.81.tgz";
+        sha512 = "Gs7xVpIZ7tYYSDA+WgpzwpPvfGwUk3KSIjJ0akuj5XQHFdyQnsUoM76EA4CIHXNLPiVwTwOFay9RMb0ChG3OBw==";
       };
     };
     "emojis-list-3.0.0" = {
@@ -2083,6 +2083,15 @@ let
         sha512 = "+OZOV9ubyQ6oI2BXEhzw4HrqvgcARY38xv3zKcjnWtMIZstEsXdI9xftd1iB7+RbOnj2HOEzkA0OyB5BaSxPQA==";
       };
     };
+    "tailwindcss-scoped-groups-2.0.0" = {
+      name = "tailwindcss-scoped-groups";
+      packageName = "tailwindcss-scoped-groups";
+      version = "2.0.0";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/tailwindcss-scoped-groups/-/tailwindcss-scoped-groups-2.0.0.tgz";
+        sha512 = "uE9PJzfjqzsKlZ0dUjG5yPwBmkEZ/qmrXMLjykRs0otolUHAIclbtV49JQGyeYLo8YA7WPMgzKOg2e4snVyHqw==";
+      };
+    };
     "tapable-2.2.1" = {
       name = "tapable";
       packageName = "tapable";
@@ -2305,7 +2314,7 @@ let
       sources."@babel/template-7.16.7"
       sources."@babel/traverse-7.17.3"
       sources."@babel/types-7.17.0"
-      sources."@discoveryjs/json-ext-0.5.6"
+      sources."@discoveryjs/json-ext-0.5.7"
       sources."@emurgo/cardano-serialization-lib-browser-10.0.4"
       sources."@jridgewell/resolve-uri-3.0.5"
       sources."@jridgewell/sourcemap-codec-1.4.11"
@@ -2382,7 +2391,7 @@ let
       sources."detective-5.2.0"
       sources."didyoumean-1.2.2"
       sources."dlv-1.1.3"
-      sources."electron-to-chromium-1.4.78"
+      sources."electron-to-chromium-1.4.81"
       sources."emojis-list-3.0.0"
       sources."enhanced-resolve-5.9.2"
       sources."envinfo-7.8.1"
@@ -2522,6 +2531,7 @@ let
       sources."supports-color-7.2.0"
       sources."supports-preserve-symlinks-flag-1.0.0"
       sources."tailwindcss-3.0.23"
+      sources."tailwindcss-scoped-groups-2.0.0"
       sources."tapable-2.2.1"
       (sources."terser-5.12.0" // {
         dependencies = [

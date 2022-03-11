@@ -2,7 +2,7 @@
 let
   nodePkgs = (pkgs.callPackage ./src {
     inherit pkgs;
-    nodejs = pkgs.nodejs-12_x;
+    nodejs = pkgs.nodejs-14_x;
   }).shell.nodeDependencies;
 
   frontendSrcFiles = ../frontend;
@@ -14,7 +14,7 @@ in pkgs.stdenv.mkDerivation {
     set -euo pipefail
     mkdir -p $out/css
     mkdir -p $out/js
-    # mkdir -p $out/svgs
+    mkdir -p $out/svgs
     # mkdir -p $out/images
 
     # Setting up the node environment:
@@ -38,6 +38,6 @@ in pkgs.stdenv.mkDerivation {
 
     cp ./favicon.ico $out/
 
-    # cp -r svgs/* $out/svgs/
+    cp -r svgs/* $out/svgs/
   '';
 }
