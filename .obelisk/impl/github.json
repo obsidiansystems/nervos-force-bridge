@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "obelisk",
-  "branch": "ll/ghc8_10-wip",
+  "branch": "so/ghc8_10-wip-mime",
   "private": false,
-  "rev": "e98256a1c2409645c558b93f61e86e5b7068a044",
-  "sha256": "1kiw7i7y37q98wcxsqd74rn4cjy07bkr0cchigwpl5cmcs0wfqvs"
+  "rev": "2a3f53bfa80500922c2f48dce4f1db66c903ab74",
+  "sha256": "1ykafgikk6gpinjqfah7agl5x4nm2wdfds7qm6si4bjv4srb00fq"
 }

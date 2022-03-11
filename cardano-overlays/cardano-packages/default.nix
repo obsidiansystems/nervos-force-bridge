@@ -64,6 +64,8 @@ in self: super: {
   ouroboros-consensus-byron = haskellLib.doJailbreak (self.callCabal2nix "ouroboros-consensus-byron" (deps.ouroboros-network + "/ouroboros-consensus-byron") {});
   ouroboros-consensus-shelley = haskellLib.doJailbreak (self.callCabal2nix "ouroboros-consensus-shelley" (deps.ouroboros-network + "/ouroboros-consensus-shelley") {});
   ouroboros-consensus-cardano = haskellLib.doJailbreak (self.callCabal2nix "ouroboros-consensus-cardano" (deps.ouroboros-network + "/ouroboros-consensus-cardano") {});
+  ouroboros-consensus-protocol = haskellLib.doJailbreak (self.callCabal2nix "ouroboros-consensus-protocol" (deps.ouroboros-network + "/ouroboros-consensus-protocol") {});
+  strict-stm = haskellLib.doJailbreak (self.callCabal2nix "strict-stm" (deps.ouroboros-network + "/strict-stm") {});
   io-sim = self.callCabal2nix "io-sim" (deps.ouroboros-network + "/io-sim") {};
   io-classes = self.callCabal2nix "io-classes" (deps.ouroboros-network + "/io-classes") {};
   monoidal-synchronisation = self.callCabal2nix "monoidal-synchronisation" (deps.ouroboros-network + "/monoidal-synchronisation") {};

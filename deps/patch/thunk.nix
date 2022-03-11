@@ -1,3 +1,4 @@
+# DO NOT HAND-EDIT THIS FILE
 let fetch = { private ? false, fetchSubmodules ? false, owner, repo, rev, sha256, ... }:
   if !fetchSubmodules && !private then builtins.fetchTarball {
     url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz"; inherit sha256;

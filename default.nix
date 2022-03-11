@@ -61,7 +61,7 @@ in with pkgs.haskell.lib; {
         # TODO: upstream
         hspec-webdriver = self.callCabal2nix "hspec-webdriver" sources.hspec-webdriver-clone {};
         websockets = haskellLib.doJailbreak (self.callHackage "websockets" "0.12.7.2" {});
-        patch = haskellLib.doJailbreak super.patch;
+        patch = haskellLib.doJailbreak (self.callCabal2nix "patch" sources.patch {});
         reflex-dom-core = haskellLib.doJailbreak super.reflex-dom-core;
         reflex = haskellLib.doJailbreak (haskellLib.dontCheck (self.callCabal2nix "reflex" sources.reflex {}));
         browser-extension = (self.callCabal2nix "browser-extension" sources.browser-extension {});
