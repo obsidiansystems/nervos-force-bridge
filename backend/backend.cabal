@@ -22,7 +22,9 @@ library
                , tomland
                , text
                , obelisk-executable-config-lookup
+               , optics-extra
                , web3
+               , gen
                , web3-jsonrpc
                , web3-provider
                , cardano-binary

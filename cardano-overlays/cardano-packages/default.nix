@@ -39,6 +39,7 @@ in self: super: {
   cardano-data = haskellLib.dontCheck (self.callCabal2nix "cardano-data" (deps.cardano-ledger + "/libs/cardano-data") {});
   set-algebra = haskellLib.dontCheck (self.callCabal2nix "set-algebra" (deps.cardano-ledger + "/libs/set-algebra") {});
   compact-map = self.callCabal2nix "compact-map" (deps.cardano-ledger + "/libs/compact-map") {};
+  cardano-ledger-pretty = self.callCabal2nix "cardano-ledger-pretty" (deps.cardano-ledger + "/libs/cardano-ledger-pretty") {};
   cardano-crypto-wrapper = haskellLib.dontCheck (self.callCabal2nix "cardano-crypto-wrapper" (deps.cardano-ledger + "/eras/byron/crypto") {});
   cardano-crypto-test = haskellLib.doJailbreak (haskellLib.dontCheck (self.callCabal2nix "cardano-crypto-test" (deps.cardano-ledger + "/eras/byron/crypto/test") {}));
   # deprecated
@@ -78,6 +79,7 @@ in self: super: {
 
   # cardano-node
   cardano-api = haskellLib.dontCheck (self.callCabal2nix "cardano-api" (deps.cardano-node + "/cardano-api") {});
+  gen = haskellLib.dontCheck (self.callCabal2nix "gen" (deps.cardano-node + "/cardano-api") {});
   cardano-node = ((self.callCabal2nix "cardano-node" (deps.cardano-node + "/cardano-node") {}));
   cardano-cli = haskellLib.overrideCabal (self.callCabal2nix "cardano-cli" (deps.cardano-node + "/cardano-cli") {}) (drv: {
     doCheck = false;
@@ -86,7 +88,7 @@ in self: super: {
       export CARDANO_NODE_SRC=$PWD
     '';
     buildTools = (drv.buildTools or []) ++ [ pkgs.jq pkgs.shellcheck pkgs.coreutils ];
-    configureFlags = [ "--dependency=cardano-api:gen=cardano-api-1.32.1-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
+    # configureFlags = [ "--dependency=cardano-api:gen=cardano-api-1.32.1-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
   });
   cardano-config = ((self.callCabal2nix "cardano-config" (deps.cardano-node + "/cardano-config") {}));
   hedgehog-extras = self.callCabal2nix "hedgehog-extras" deps.hedgehog-extras {};
@@ -94,6 +96,7 @@ in self: super: {
   # cardano-wallet
   cardano-wallet = haskellLib.dontCheck (self.callCabal2nix "cardano-wallet" (deps.cardano-wallet + "/lib/shelley") {}); # pending setting up envars to fix tests
   cardano-wallet-cli = haskellLib.dontCheck (self.callCabal2nix "cardano-wallet-cli" (deps.cardano-wallet + "/lib/cli") {});
+  dbvar = haskellLib.dontCheck (self.callCabal2nix "dbvar" (deps.cardano-wallet + "/lib/dbvar") {});
   cardano-wallet-core = haskellLib.overrideCabal (self.callCabal2nix "cardano-wallet-core" (deps.cardano-wallet + "/lib/core") {}) (drv: {
     doCheck = false;
     preBuild = ''export SWAGGER_YAML=${deps.cardano-wallet + "/specifications/api/swagger.yaml"}'';
@@ -107,10 +110,10 @@ in self: super: {
 
   # plutus (uh oh!)
   plutus-core = self.callCabal2nix "plutus-core" (deps.plutus + "/plutus-core") {};
-  plutus-ledger = haskellLib.overrideCabal (self.callCabal2nix "plutus-ledger" (deps.plutus + "/plutus-ledger") {}) (drv: {
+  plutus-ledger = haskellLib.overrideCabal (self.callCabal2nix "plutus-ledger" (deps.plutus-apps + "/plutus-ledger") {}) (drv: {
     doHaddock = false; # to avoid plutus-tx-plugin errors
     # github.com/haskell/cabal/issues/7270
-    configureFlags = [ "--dependency=cardano-api:gen=cardano-api-1.32.1-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
+    # configureFlags = [ "--dependency=cardano-api:gen=cardano-api-1.32.1-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
   });
   freer-extras = self.callCabal2nix "freer-extras" (deps.plutus + "/freer-extras") {};
   playground-common = self.callCabal2nix "playground-common" (deps.plutus + "/playground-common") {};
@@ -149,7 +152,8 @@ in self: super: {
 
   # other misc
   aeson = self.callCabal2nix "aeson" deps.aeson {}; # 1.5.6.0
-  openapi3 = null; # haskellLib.dontCheck (haskellLib.doJailbreak (self.callHackage "openapi3" "3.2.0" {}));
+  optics-extra = self.callHackage "optics-extra" "0.4" {};
+  openapi3 = haskellLib.dontCheck (haskellLib.doJailbreak (self.callCabal2nix "openapi3" deps.openapi3 {}));
   servant-openapi3 = haskellLib.doJailbreak (self.callHackage "servant-openapi3" "2.0.1.2" {});
   servant = self.callHackage "servant" "0.18.3" {};
   servant-client = self.callHackage "servant-client" "0.18.3" {};
@@ -200,7 +204,8 @@ in self: super: {
   base64-bytestring-type = haskellLib.doJailbreak super.base64-bytestring-type;
   tree-diff = haskellLib.doJailbreak super.tree-diff;
   lattices = haskellLib.doJailbreak super.lattices;
-  insert-ordered-containers = haskellLib.doJailbreak super.insert-ordered-containers;
+  deepseq = haskellLib.dontCheck (haskellLib.doJailbreak (self.callHackage "deepseq" "1.4.3.0" {}));
+  insert-ordered-containers = haskellLib.doJailbreak (self.callHackage "insert-ordered-containers" "0.2.4" {});
   swagger2 = haskellLib.dontCheck (self.callHackage "swagger2" "2.6" {});
   lzma = haskellLib.dontCheck super.lzma;
   aeson-casing = haskellLib.dontCheck super.aeson-casing;

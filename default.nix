@@ -82,7 +82,7 @@ in with pkgs.haskell.lib; {
         ghcjs-dom-jsaddle = self.callHackage "ghcjs-dom-jsaddle" "0.9.5.0" {};
         validation-selective = haskellLib.doJailbreak super.validation-selective;
         trifecta = self.callHackage "trifecta" "2.1.2" {};
-        tomland = haskellLib.doJailbreak super.tomland;
+        tomland = haskellLib.dontCheck (haskellLib.doJailbreak super.tomland);
         # compact-map = haskellLib.doJailbreak (self.callHackage "compact-map" "2008.11.9" {});
         # plutus-ledger-constraints = haskellLib.doJailbreak cardano-ledger-constraints;
         # TODO(skylar): This may not even be needed cause of cardano-binary
