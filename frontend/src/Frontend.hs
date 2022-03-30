@@ -34,6 +34,7 @@ import Obelisk.Generated.Static
 import Reflex.Dom.Core hiding (now)
 
 import Common.Route
+import Common.Bridge
 
 import qualified Nami
 import Nami (BridgeInTx(..))
@@ -136,7 +137,7 @@ frontend = Frontend
       elClass "div" "flex flex-col flex-grow bg-blue-100 justify-center items-center" $ prerender_ blank $ do
         eApi <- liftJSM $ Nami.getApi
         case eApi of
-          Right api -> do
+          Right api -> mdo
             (submitTx, waiting, _) <- elClass "div" "w-1/3 drop-shadow-xl bg-white rounded-lg p-4" $ mdo
               addr <- liftJSM $ Nami.getUsedAddress api
               balance <- liftJSM $ Nami.getBalance api
@@ -178,10 +179,10 @@ frontend = Frontend
                 clickSubmit = domEvent Click submitButton
                 bridgeRequest = liftA2 Nami.BridgeRequest <$> amount <*> (Nami.mkCKBAddress <$> ckbAddress)
                 submitRequest = tagMaybe (current bridgeRequest) clickSubmit
-                submitFunc =
-                  maybe (const $ pure $ Left Nami.TxSendFailure) (\a -> Nami.doPay api a) addr
+                submitFunc s =
+                  maybe (const $ pure $ Left Nami.TxSendFailure) (\a -> Nami.doPay api s a) addr
 
-                doSubmit = submitFunc <$> submitRequest
+                doSubmit = attachWith submitFunc (slot <$> current cb) submitRequest
 
               submitting <- holdDyn False $ leftmost [ True <$ doSubmit
                                                      , False <$ resultTx
@@ -307,12 +308,15 @@ toStatus ct b mtx = case mtx of
     confirmations = maybe 0 (min 0 . subtract (height b) . block_height) mtx
 
 -- | A dynamic representing the current block on cardano's chain
-currentBlock :: (MonadJSM (Performable m), MonadFix m, TriggerEvent t m, PerformEvent t m, MonadHold t m, PostBuild t m) => m (Dynamic t Block)
+currentBlock :: (DomBuilder t m,MonadJSM (Performable m), MonadFix m, TriggerEvent t m, PerformEvent t m, MonadHold t m, PostBuild t m) => m (Dynamic t Block)
 currentBlock = do
   pb <- getPostBuild
   b <- tickLossyFromPostBuildTime 60
   newBlock <- getBlock $ leftmost [() <$ b, pb]
-  holdDyn (Block 0) newBlock
+
+  dBlock <- holdDyn (Block 0 0) newBlock
+  display dBlock
+  pure dBlock
 
 -- | Given a tx hash will give you a dynamic holding the current transaction info (if it exists)
 pollTx :: (MonadJSM (Performable m), MonadFix m, TriggerEvent t m, PerformEvent t m, MonadHold t m, PostBuild t m) => Dynamic t Nami.TxHash -> m (Dynamic t (Maybe Tx))
@@ -350,7 +354,7 @@ bridgeInTx block now btx = do
     elDynAttr "a" (mkHashAttrs <$> tx) $ dynText $ bridgeInTxHash <$> btx
     elClass "div" "mt-2 mb-2 flex justify-between" $ do
       elClass "div" "font-semibold" $ text "To "
-      elClass "div" "" $ dynText $ Nami.unCKBAddress . bridgeInToAddress <$> btx
+      elClass "div" "" $ dynText $ unCKBAddress . bridgeInToAddress <$> btx
     elClass "div" "flex justify-between" $ do
       elClass "div" "font-semibold" $ text "Ada "
       elClass "div" "" $ dynText $ tShow . bridgeInAmount <$> btx

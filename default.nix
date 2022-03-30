@@ -23,6 +23,7 @@ let
 
   ckb = import sources.ckb {};
   ckb-cli = import sources.ckb-cli {};
+  ckb-indexer = import sources.ckb-indexer {};
   capsule = import sources.capsule {};
   pkgs = obelisk.pkgs;
 
@@ -95,6 +96,7 @@ in with pkgs.haskell.lib; {
         web3-solidity = doJailbreak (dontCheck super.web3-solidity);
         web3-ethereum-core = doJailbreak (dontCheck super.web3-ethereum-core);
         web3-ethereum = doJailbreak (dontCheck super.web3-ethereum);
+        basement = doJailbreak (self.callHackage "basement" "0.0.11" {});
 
         # web3-ethereum dependency
         relapse = dontCheck (markUnbroken super.relapse);
@@ -107,7 +109,7 @@ in with pkgs.haskell.lib; {
         # Add executables to backend depends
         backend = haskellLib.overrideCabal super.backend {
           librarySystemDepends = [
-            ckb ckb-cli capsule
+            ckb ckb-cli ckb-indexer capsule
           ];
         };
       })];
