@@ -21,6 +21,7 @@ import Data.Aeson.TH
 import qualified Data.Text as T
 
 import Data.Maybe
+import qualified Data.Map as M
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -99,25 +100,44 @@ data Txn = Txn
   }
   deriving (Eq, Show)
 
-data MultiSigConfigs =
-  MultiSigConfigs {}
+data MultiSigConfigs = MultiSigConfigs (M.Map LockArg MultiSigConfig)
   deriving (Eq, Show)
 
-instance ToJSON MultiSigConfigs where
-  toJSON = const $ object []
+data MultiSigConfig = MultiSigConfig
+  { sighash_addresses :: [Address] -- ckb addresses
+  , require_first_n :: Int
+  , threshold :: Int
+  } deriving (Eq, Show)
 
-instance FromJSON MultiSigConfigs where
-  parseJSON = withObject "MultiSigConfigs" $ const (pure MultiSigConfigs)
+-- instance ToJSON MultiSigConfigs where
+--   toJSON = const $ object []
 
-data Signatures =
-  Signatures {}
+-- instance FromJSON MultiSigConfigs where
+--   parseJSON = withObject "MultiSigConfigs" $ const (pure MultiSigConfigs)
+
+data Signatures = Signatures (M.Map LockArg [Signature])
   deriving (Eq, Show)
 
-instance ToJSON Signatures where
-  toJSON = const $ object []
 
-instance FromJSON Signatures where
-  parseJSON = withObject "Signatures" $ const (pure Signatures)
+newtype Signature =
+  Signature { unSignature :: T.Text }
+  deriving (Eq, Show)
+
+type LockArg = T.Text 
+
+-- instance ToJSON Signatures where
+--   toJSON = const $ object []
+
+-- instance FromJSON Signatures where
+--   parseJSON = withObject "signatures" $ const (pure Signatures)
+
+
+-- Whats known about Signatures and multisig configs
+  -- they are built around a particular lock-arg which comes from the multisig address
+  -- require 
+
+
+
 
 data TxFile = TxFile
   { _txFile_transaction :: Txn
@@ -147,6 +167,10 @@ deriveJSON (scrubPrefix "_txFile_") ''TxFile
 deriveJSON (scrubPrefix "liveCell_") ''LiveCell
 deriveJSON (scrubPrefix "liveCells_") ''LiveCells
 deriveJSON (scrubPrefix "addressInfo_") ''AddressInfo
+deriveJSON defaultOptions ''Signature
+deriveJSON defaultOptions ''Signatures
+deriveJSON defaultOptions ''MultiSigConfig
+deriveJSON defaultOptions ''MultiSigConfigs
 
 getAddressInfo :: BridgeM m => Address -> m Script
 getAddressInfo (Address addr) = do
@@ -231,9 +255,21 @@ addInput file (LiveCell _ hash index) = do
   logInfo $ "Result: " <> T.pack result
   pure ()
 
+-- More generally, when we sign, we sign *for* a given lock arg - so to put a signature we either
+-- need to have created or create it, by
+  -- calling the CLI with our lock-arg of the account (or multisig account) which we would like to
+  --    transfer from
+  -- OR
+  -- calling the CLI 
+
+
+-- the multisig basically translates to for this lock-arg (pertaining to the msig address)
+-- we require some amount of these following addresses
+
+
 -- TODO (ckb cli config)
-addSignature :: BridgeM m => FilePath -> Address -> T.Text -> m ()
-addSignature file (Address addr) pass = do
+signTxFile :: BridgeM m => FilePath -> Address -> T.Text -> m ()
+signTxFile file (Address addr) pass = do
   let
     opts = [ "tx"
            , "sign-inputs"
@@ -250,7 +286,13 @@ addSignature file (Address addr) pass = do
   -- logError $ "TEHE: " <> T.pack result
   pure ()
 
-buildMintTxn :: BridgeM m => Address -> DeployedScript -> Ada.LockTx -> m FilePath
+
+buildMintTxn :: BridgeM m =>
+                Address
+                -- ^ CKB Multisig address 
+             -> DeployedScript
+             -> Ada.LockTx
+             -> m FilePath
 buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
   (fname, _) <- liftIO $ openTempFile "." "tx.json"
   coins <- coinSelection addr cellCost
@@ -268,8 +310,8 @@ buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
     txFile =
       TxFile
       tx
-      MultiSigConfigs
-      Signatures
+      (MultiSigConfigs mempty)
+      (Signatures mempty)
 
     totalCapacity = foldr (addCkb . liveCell_capacity) (shannons 0) coins
 
@@ -335,5 +377,5 @@ emptyTxFile :: TxFile
 emptyTxFile =
   TxFile
   emptyTxn
-  MultiSigConfigs
-  Signatures
+  (MultiSigConfigs mempty)
+  (Signatures mempty) 

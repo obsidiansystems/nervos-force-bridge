@@ -37,6 +37,9 @@ library
                , aeson
                , lens-aeson
                , wreq
+               , http-client
+               , http-client-tls
+                              
   exposed-modules:
     Backend
   other-modules:

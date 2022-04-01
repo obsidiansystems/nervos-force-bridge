@@ -14,12 +14,17 @@ import Control.Concurrent (threadDelay)
 import Network.Web3.Provider (Provider)
 import qualified Data.Text as T
 import Data.Maybe
+import qualified Data.Map as M
 
 import Data.Aeson
 import Data.Aeson.TH
 
 import Servant
-import Servant.Client (ClientM, client)
+import Servant.Client (ClientM, client, ClientEnv, parseBaseUrl, mkClientEnv, runClientM, Scheme(Https)
+                      , BaseUrl(BaseUrl), ClientError)
+import Network.HTTP.Client (Manager, newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
+
 import Network.Wai.Handler.Warp (run)
 
 import Bridge.Utils
@@ -84,6 +89,7 @@ data VerifierConfig =
                  , verifierCardanoAddress :: Ada.Address
 
                  , verifierApiKey :: BF.ApiKey
+                 -- TODO(galen): does a verifier need to know its own port?
                  , verifierConfigPort :: Int
                  }
   deriving (Eq)
@@ -91,20 +97,18 @@ data VerifierConfig =
 data CollectorConfig =
   CollectorConfig { collectorConfigNode :: Provider
                   , collectorConfigIndexer :: Provider
-
+                  
+                  , collectorNervosMultisigAddress :: CKB.Address
                   , collectorNervosDeployedScript :: CKB.DeployedScript
 
                   , collectorCardanoAddress :: Ada.Address
 
                   , collectorApiKey :: BF.ApiKey
 
+                  , collectorMultiSigConfig :: MultiSigConfigs
                   , collectorVerifierUrls :: [String]
                  }
   deriving (Eq)
-
-newtype Signature =
-  Signature { unSignature :: T.Text }
-  deriving (Eq, Show)
 
 data Response =
   Response { responseSignature :: Maybe Signature }
@@ -114,7 +118,6 @@ data Request =
   Request { requestLock :: Ada.LockTx }
   deriving (Eq, Show)
 
-deriveJSON defaultOptions ''Signature
 deriveJSON defaultOptions ''Request
 deriveJSON defaultOptions ''Response
 
@@ -136,6 +139,7 @@ runVerifierServer vc = liftIO $ run (verifierConfigPort vc) (verifierApplication
 requestSignature :: Request -> ClientM (Response)
 requestSignature = client verifierApiProxy
 
+-- TODO(galen): properly set ports 
 handleSignatureRequest :: VerifierConfig -> Request -> Servant.Handler Response
 handleSignatureRequest vc (Request lockTx) =
   liftIO $ runBridge $ do
@@ -148,12 +152,18 @@ handleSignatureRequest vc (Request lockTx) =
       False -> pure Nothing
       True -> do
         txFile <- buildMintTxn multiSigAddress deployedScript lockTx
-        addSignature txFile sigAddress pass
-        -- TODO(skylar): Extend the Signature/MultiSig Configs and addSignature functions to get back the signature
+        signTxFile txFile sigAddress pass
+        txn <- liftIO $ decodeFileStrict txFile
+        case getFirstSignature txn of 
+          Just sig -> pure sig
+          Nothing -> pure Nothing
+
+
+        -- TODO(skylar): Extend the Signature/MultiSig Configs and signTxFile functions to get back the signature
         -- return it here
-        pure Nothing
 
   where
+    getFirstSignature (TxFile _ _ (Signatures map)) = headMay . snd =<< headMay $ toList map 
     deployedScript = verifierNervosDeployedScript vc
     multiSigAddress = verifierNervosMultisigAddress vc
     sigAddress = verifierNervosPersonalAddress vc
@@ -168,24 +178,94 @@ headMay :: [a] -> Maybe a
 headMay (x:_) = Just x
 headMay _ = Nothing
 
+
+-- Hardcoded to use https for better security 
+-- TODO(galen): Change this to configure to each URL for verifiers 
+myMkClientEnv :: Int -> Manager -> String -> ClientEnv 
+myMkClientEnv port manager domain = mkClientEnv manager (BaseUrl Http domain port "")
+
+getValidMintTxs :: [(Ada.LockTx, [Either ClientError (Maybe Signature)])] -> [(Ada.LockTx, [Signature])] 
+getValidMintTxs txnsResponses = filter signaturesAtLeast2
+                                $ fmap (\(tx, emSigs) -> (tx, catMaybes $ fmap (join . eitherToMaybe) emSigs)) 
+                                $ txnsResponses
+  where
+    signaturesAtLeast2 :: 
+
+eitherToMaybe :: Either e a -> Maybe a
+eitherToMaybe (Right a) = Just a
+eitherToMaybe (Left _) = Nothing 
+
 runCollector :: BridgeM m => CollectorConfig -> m ()
 runCollector vc = forever $ do
   locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress vc
   mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
 
-  let unMinted =
-        getUnmintedLocks locks mints
+  manager <- liftIO $ newManager tlsManagerSettings
+  let unMinted = getUnmintedLocks locks mints
 
+      requestsToMint :: [Request] 
+      requestsToMint = Request <$> unMinted 
+
+      -- TODO(galen): code this to zip with the 5 ports for starting the verifiers 
+      clientEnvs = [ myMkClientEnv 8000 manager "localhost"
+                   , myMkClientEnv 8001 manager "localhost"
+                   , myMkClientEnv 8002 manager "localhost"
+                   ] 
+        
+      requestSignatures :: [Request] -> ClientM [Response]
+      requestSignatures reqs = mapM requestSignature reqs 
+
+      getResponses :: [Request] -> ClientEnv -> IO [Response]
+      getResponses reqs clientEnv = runClientM (requestSignatures reqs) clientEnv 
+
+      -- requestVerifiersSignatures
+      verifyTransaction :: [ClientEnv] -> Request -> IO [Either ClientError Response]
+      verifyTransaction envs req = mapM (runClientM $ requestSignature req) envs
+
+  -- represents list of lists_A where lists_A is a Maybe Signature; the inner list thererfore
+  -- represents whether the transaction should succeed 
+  possibleMints <- mapM (verifyTransaction clientEnvs) requestsToMint
+
+  let
+    -- TODO(galen): should we make this a set?
+    reqRes :: [(Ada.LockTx, [Either ClientError Signature])]
+    reqRes = zip unMinted (fmap catMaybes $ (fmap.fmap) responseSignature possibleMints)
+
+    getValid :: [(Ada.LockTx, [Either ClientError Signature])] -> [(Ada.LockTx, [Signature])] 
+    getValid = filter shouldMint 
+
+  
+  mintFilePaths <- mapM (buildMintTxn multiSigAddress deployedScript) $ fmap fst $ shouldMint reqRes
+
+  -- TODO(galen): make it very clear that the Ada.LockTx -> TxFile =is= ckb_mint 
+  let
+    toSign :: [(FilePath, [Signature])] 
+    toSign = zip mintFilePaths $ snd <$> (shouldMint reqRes)
+    
+    addSigsToTxFile :: BridgeM m => [Signature] -> FilePath -> m () 
+    addSigsToTxFile signatures path = do
+      Just txn <- liftIO $ decodeFileStrict path
+      liftIO $ encodeFile path
+        $ TxFile txn multiSigConfig
+        $ Signatures $ M.fromList [((fst . head . M.toList $ multiSigMap), signatures)]
+
+
+  mapM (\(fp, sigs) -> addSigsToTxFile sigs fp) toSign
+  mapM submitTxFromFile mintFilePaths 
+ 
   -- TODO(skylar): For each verifier call the requestSignature client function above, providing the endpoint
   -- this will give you the list of signatures you need
 
   liftIO $ threadDelay 1000000
   pure ()
   where
+    multiSigAddress = collectorNervosMultisigAddress vc
+    multiSigConfig = collectorMultiSigConfig vc
+    MultiSigConfigs multiSigMap = multiSigConfig 
     deployedScript = collectorNervosDeployedScript vc
     ckb = collectorConfigNode vc
     indexer = collectorConfigIndexer vc
-
+    verifierUrls = collectorVerifierUrls vc 
     apiKey = collectorApiKey vc
 
 {-

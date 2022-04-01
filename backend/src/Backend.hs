@@ -115,11 +115,63 @@ getAllMintRecords = do
         Left _ -> pure []
         Right a -> pure a
 
+-- Port could extend to domain when we actually launch
+startVerifiers :: _ -> IO [Port] 
+startVerifiers = do
+  let mkConfig port = VerifierConfig
+                      nodeProvider
+                      indexerProvider
+                      _ _ {-<- in comments-}
+                      password -- just make one
+                      (=<< getsDeployedScript)
+                      cardanoAddress
+                      apiKey
+                      port
+  
+  startVerifier 8000
+  startVerifier 8001
+  startVerifier 8002
+  startVerifier 8003
+  startVerifier 8004
+                 
+               
+  where
+    startVerifier port = run port (verifierApplication $ mkConfig port) 
+
 -- | Backend definition for force-bridge
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
       -- flip runLoggingT (putDoc . renderWithSeverity pretty) $ runDevNode "ckb"
+      let
+        cardanoAddress = undefined
+        
+        deployedScript = DeployedScript deployedSUDT deployedSUDTDep
+        myMultiSigConfig = MultiSigConfig (fromList [(lockArg, verifierAddresses)])
+        mkVerifierConfig port thisAddress password = VerifierConfig
+                                                     ckbProvider
+                                                     ckbIndexerProvider
+                                                     (Address "ckt1qyqeq8vyk57pup0u3xj57hzsx34wyel5824sz84hn4")
+                                                     thisAddress
+                                                     password 
+                                                     deployedScript 
+                                                     cardanoAddress 
+                                                     defaultApiKey 
+                                                     port 
+                                                     
+        myCollectorConfig = CollectorConfig
+                            ckbProvider
+                            ckbIndexerProvider
+                            (Address "ckt1qyqeq8vyk57pup0u3xj57hzsx34wyel5824sz84hn4")
+                            deployedScript
+                            cardanoAddress
+                            defaultApiKey
+                            "0x901d84b53c1e05fc89a54f5c50346ae267f43aab"
+                            -- ^ might pass in multisig config instead 
+                            [] -- we dont need this yet 
+                            
+      startVerifiers
+      runCollector 
       serve $ const $ return ()
   , _backend_routeEncoder = fullRouteEncoder
   }

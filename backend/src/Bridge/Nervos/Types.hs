@@ -45,6 +45,9 @@ newtype Address =
   Address { unAddress :: T.Text }
   deriving (Eq, Show)
 
+deriveJSON defaultOptions ''Address
+
+
 newtype TxHash =
   TxHash { unTxHash :: T.Text }
   deriving (Eq, Show)
