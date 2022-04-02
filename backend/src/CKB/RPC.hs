@@ -236,11 +236,11 @@ deriveJSON defaultOptions ''BlockTip
 -- TODO(skylar): These need to be in a config
 ckbIndexerProvider :: Provider
 ckbIndexerProvider =
-  HttpProvider "http://localhost:9116"
+  HttpProvider "http://obsidian.webhop.org:9116"
 
 ckbProvider :: Provider
 ckbProvider =
-  HttpProvider "http://localhost:9114"
+  HttpProvider "http://obsidian.webhop.org:9114"
 
 deployedSUDT :: Script
 deployedSUDT = Script

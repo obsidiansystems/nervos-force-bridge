@@ -20,7 +20,7 @@ import Data.Aeson
 import Data.Aeson.TH
 
 import Servant
-import Servant.Client (ClientM, client, ClientEnv, parseBaseUrl, mkClientEnv, runClientM, Scheme(Https)
+import Servant.Client (ClientM, client, ClientEnv, parseBaseUrl, mkClientEnv, runClientM, Scheme(Http)
                       , BaseUrl(BaseUrl), ClientError)
 import Network.HTTP.Client (Manager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -154,8 +154,8 @@ handleSignatureRequest vc (Request lockTx) =
         txFile <- buildMintTxn multiSigAddress deployedScript lockTx
         signTxFile txFile sigAddress pass
         txn <- liftIO $ decodeFileStrict txFile
-        case getFirstSignature txn of 
-          Just sig -> pure sig
+        case getFirstSignature =<< txn of 
+          Just sig -> pure . Just $ sig
           Nothing -> pure Nothing
 
 
@@ -163,7 +163,7 @@ handleSignatureRequest vc (Request lockTx) =
         -- return it here
 
   where
-    getFirstSignature (TxFile _ _ (Signatures map)) = headMay . snd =<< headMay $ toList map 
+    getFirstSignature (TxFile _ _ (Signatures map)) = headMay . snd =<< (headMay $ M.toList map)
     deployedScript = verifierNervosDeployedScript vc
     multiSigAddress = verifierNervosMultisigAddress vc
     sigAddress = verifierNervosPersonalAddress vc
@@ -184,12 +184,14 @@ headMay _ = Nothing
 myMkClientEnv :: Int -> Manager -> String -> ClientEnv 
 myMkClientEnv port manager domain = mkClientEnv manager (BaseUrl Http domain port "")
 
+-- TODO(galen): extend this to take a multisig threshold ?
 getValidMintTxs :: [(Ada.LockTx, [Either ClientError (Maybe Signature)])] -> [(Ada.LockTx, [Signature])] 
 getValidMintTxs txnsResponses = filter signaturesAtLeast2
                                 $ fmap (\(tx, emSigs) -> (tx, catMaybes $ fmap (join . eitherToMaybe) emSigs)) 
                                 $ txnsResponses
   where
-    signaturesAtLeast2 :: 
+    signaturesAtLeast2 :: (Ada.LockTx, [Signature]) -> Bool
+    signaturesAtLeast2 (_, sigs) = length sigs > 1
 
 eitherToMaybe :: Either e a -> Maybe a
 eitherToMaybe (Right a) = Just a
@@ -215,8 +217,8 @@ runCollector vc = forever $ do
       requestSignatures :: [Request] -> ClientM [Response]
       requestSignatures reqs = mapM requestSignature reqs 
 
-      getResponses :: [Request] -> ClientEnv -> IO [Response]
-      getResponses reqs clientEnv = runClientM (requestSignatures reqs) clientEnv 
+      -- getResponses :: [Request] -> ClientEnv -> IO [Response]
+      -- getResponses reqs clientEnv = runClientM (requestSignatures reqs) clientEnv 
 
       -- requestVerifiersSignatures
       verifyTransaction :: [ClientEnv] -> Request -> IO [Either ClientError Response]
@@ -224,34 +226,37 @@ runCollector vc = forever $ do
 
   -- represents list of lists_A where lists_A is a Maybe Signature; the inner list thererfore
   -- represents whether the transaction should succeed 
-  possibleMints <- mapM (verifyTransaction clientEnvs) requestsToMint
-
+  responses <- liftIO $ mapM (verifyTransaction clientEnvs) requestsToMint
+  
   let
     -- TODO(galen): should we make this a set?
-    reqRes :: [(Ada.LockTx, [Either ClientError Signature])]
-    reqRes = zip unMinted (fmap catMaybes $ (fmap.fmap) responseSignature possibleMints)
+    reqRes :: [(Ada.LockTx, [Either ClientError (Maybe Signature)])]
+    reqRes = zip unMinted ((fmap.fmap.fmap) responseSignature responses)
 
-    getValid :: [(Ada.LockTx, [Either ClientError Signature])] -> [(Ada.LockTx, [Signature])] 
-    getValid = filter shouldMint 
-
+    valid :: [(Ada.LockTx, [Signature])]
+    valid = getValidMintTxs reqRes 
   
-  mintFilePaths <- mapM (buildMintTxn multiSigAddress deployedScript) $ fmap fst $ shouldMint reqRes
+  mintFilePaths <- mapM (buildMintTxn multiSigAddress deployedScript) $ fst <$> valid 
 
   -- TODO(galen): make it very clear that the Ada.LockTx -> TxFile =is= ckb_mint 
   let
     toSign :: [(FilePath, [Signature])] 
-    toSign = zip mintFilePaths $ snd <$> (shouldMint reqRes)
+    toSign = zip mintFilePaths $ snd <$> valid 
     
-    addSigsToTxFile :: BridgeM m => [Signature] -> FilePath -> m () 
+    addSigsToTxFile :: BridgeM m => [Signature] -> FilePath -> m (Maybe FilePath) 
     addSigsToTxFile signatures path = do
-      Just txn <- liftIO $ decodeFileStrict path
-      liftIO $ encodeFile path
-        $ TxFile txn multiSigConfig
-        $ Signatures $ M.fromList [((fst . head . M.toList $ multiSigMap), signatures)]
+      txn <- liftIO $ decodeFileStrict path
+      case txn of
+        Just txn' -> do 
+          liftIO $ encodeFile path
+            $ TxFile txn' multiSigConfig
+            $ Signatures $ M.fromList [((fst . head . M.toList $ multiSigMap), signatures)]
+          pure $ Just path 
+        Nothing ->
+          pure Nothing 
 
-
-  mapM (\(fp, sigs) -> addSigsToTxFile sigs fp) toSign
-  mapM submitTxFromFile mintFilePaths 
+  maybeMintFilePaths <- mapM (\(fp, sigs) -> addSigsToTxFile sigs fp) toSign
+  mapM submitTxFromFile $ catMaybes maybeMintFilePaths 
  
   -- TODO(skylar): For each verifier call the requestSignature client function above, providing the endpoint
   -- this will give you the list of signatures you need

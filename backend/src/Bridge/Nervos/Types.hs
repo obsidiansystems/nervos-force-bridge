@@ -102,6 +102,20 @@ ckb n = CKBytes $ truncate $ n * ckbInShannons
 ckbytesToDouble :: CKBytes -> Double
 ckbytesToDouble (CKBytes s) = fromIntegral s / fromIntegral ckbInShannons
 
+
+
+deployedSUDT :: Script
+deployedSUDT = Script
+  "0x82a4784a46f42916f144bfd1926fda614560e403bc131408881de82fee0724ad"
+  HashTypeData -- "data"
+  "0x13146ce73ad549724291df1ecb476c6cc5837a9a1e5393728be71cba9b885027"
+
+deployedSUDTDep :: CellDep
+deployedSUDTDep = CellDep
+  (OutPoint "0xb8e114fe03ca612c2987f56d6126c87a3aad3647156dbb8b2a16fc9888676776" "0x0")
+  Code
+
+
 instance ToJSON HashType where
   toJSON dt = String $ case dt of
     HashTypeType -> "type"
