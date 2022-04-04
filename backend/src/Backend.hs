@@ -132,9 +132,9 @@ lookupLockPayee txh@(TxHash hash) = do
 setCkbCliConfig :: IO ()
 setCkbCliConfig = do
   let
-    opts = [ "config"
-           , "--url"
+    opts = [ "--url"
            , "http://obsidian.webhop.org:9114"
+           , "--no-sync" -- otherwise our application will hang for ever 
            ]
 
   readProcess ckbCliPath opts ""
