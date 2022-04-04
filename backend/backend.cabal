@@ -39,6 +39,8 @@ library
                , wreq
                , http-client
                , http-client-tls
+               , hexstring
+               , containers
                               
   exposed-modules:
     Backend
