@@ -72,6 +72,7 @@ in with pkgs.haskell.lib; {
         dependent-monoidal-map = haskellLib.doJailbreak super.dependent-monoidal-map;
         entropy = self.callCabal2nix "entropy" sources.entropy {};
         ghcjs-dom = self.callHackage "ghcjs-dom" "0.9.5.0" {};
+        cabal-install = self.callPackage (self.callCabal2nix "cabal-install" (sources.cabal + "/cabal-install") {});
         jsaddle-dom = haskellLib.doJailbreak(self.callHackage "jsaddle-dom" "0.9.5.0" {});
         lens = haskellLib.doJailbreak(self.callHackage "lens" "5.1" {});
         vector = haskellLib.doJailbreak(self.callHackage "vector" "0.12.3.1" {});

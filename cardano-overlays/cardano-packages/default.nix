@@ -113,7 +113,7 @@ in self: super: {
   plutus-ledger = haskellLib.overrideCabal (self.callCabal2nix "plutus-ledger" (deps.plutus-apps + "/plutus-ledger") {}) (drv: {
     doHaddock = false; # to avoid plutus-tx-plugin errors
     # github.com/haskell/cabal/issues/7270
-    # configureFlags = [ "--dependency=cardano-api:gen=cardano-api-1.32.1-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
+    # configureFlags = [ "--dependency=gen=cardano-api-1.33.0-Fx8Wd6R8QrDmKMaXBLt3v-gen" ]; # gross, but it works
   });
   freer-extras = self.callCabal2nix "freer-extras" (deps.plutus + "/freer-extras") {};
   playground-common = self.callCabal2nix "playground-common" (deps.plutus + "/playground-common") {};
