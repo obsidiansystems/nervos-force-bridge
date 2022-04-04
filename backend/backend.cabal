@@ -41,6 +41,7 @@ library
                , http-client-tls
                , hexstring
                , containers
+               , lens
                               
   exposed-modules:
     Backend
