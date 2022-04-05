@@ -183,8 +183,11 @@ backend = Backend
         startVerifier conf@(a, (port, p)) = void $ forkIO $ run port $ verifierApplication $ mkVerifierConfig conf
   
       liftIO $ setCkbCliConfig 
-      liftIO $ mapM startVerifier verifierCredentials 
-      flip runLoggingT (putDoc . renderWithSeverity pretty) $ runCollector myCollectorConfig
+      liftIO $ mapM startVerifier verifierCredentials
+      liftIO $ print "hey"
       serve $ const $ return ()
+      flip runLoggingT (putDoc . renderWithSeverity pretty) $ runCollector myCollectorConfig
+      liftIO $ print "hello"
+      
   , _backend_routeEncoder = fullRouteEncoder
   }

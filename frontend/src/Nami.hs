@@ -208,8 +208,8 @@ pay napi slot mdatum _ to ada = liftJSM $ do
   output <- newTransactionOutput to ada
   _ <- tbuild ^. js1 "add_output" output
 
-  let
-  _ <- tbuild ^. js1 "set_ttl" (slot + 10000)
+  -- let
+  -- _ <- tbuild ^. js1 "set_ttl" (slot + 10000)
 
   changeAddress <- getChangeAddress napi
   case changeAddress of
