@@ -42,21 +42,29 @@ library
                , hexstring
                , containers
                , lens
-                              
+                                          
   exposed-modules:
     Backend
   other-modules:
+    Backend.Utils
     Bridge
     Bridge.Cardano
+    Bridge.Cardano.Blockfrost
+    Bridge.Cardano.Types
     Bridge.Nervos
-
-    -- This is older proof of concept code
+    Bridge.Nervos.Cli
+    Bridge.Nervos.Indexer
+    Bridge.Nervos.RPC
+    Bridge.Nervos.SUDT
+    Bridge.Nervos.Types
+    Bridge.Utils
     CKB
-    CKB.Types
-    CKB.RPC
-    CKB.Capsule
+    CKB.Capsule 
     CKB.Config
-    Backend.Utils
+    CKB.RPC
+    CKB.Types
+    CKB.Utils
+
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
 
 executable backend
