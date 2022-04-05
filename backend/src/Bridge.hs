@@ -209,7 +209,7 @@ runCollector vc = forever $ do
       requestsToMint = Request <$> unMinted 
 
       -- TODO(galen): code this to zip with the 5 ports for starting the verifiers 
-      clientEnvs = [ myMkClientEnv 8000 manager "localhost"
+      clientEnvs = [ myMkClientEnv 8003 manager "localhost"
                    , myMkClientEnv 8001 manager "localhost"
                    , myMkClientEnv 8002 manager "localhost"
                    ] 

@@ -42,7 +42,7 @@ data TxOutputs = TxOutputs
 deriveJSON (scrubPrefix "txo_") ''TxOutputs
 
 defaultApiKey :: ApiKey
-defaultApiKey = ApiKey "testnetSZ2mfBUA7l0Ogl5QZu4jGqc0xhg1anq9"
+defaultApiKey = ApiKey "testnetHf22J7FWl70gaYZljRwEFS7oE6mKuULF"  --  "testnetSZ2mfBUA7l0Ogl5QZu4jGqc0xhg1anq9"
 
 -- TODO failure handling for blockfrost
 getTransactions :: BridgeM m => ApiKey -> Address -> m [TxHash]

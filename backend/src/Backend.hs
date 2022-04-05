@@ -149,7 +149,7 @@ backend = Backend
         cardanoAddress = Ada.Address "addr_test1qqvyvv446w768jj42wxrh99mpmk5kd2qppst0yma8qesllldkdcxe8fngwj6m2f9uk5k8unf94tzzryz7kujnnew29xse6rxsu"
 
         mSigLockArg = "0xc099a986b4c66a590b09011e3b139bf5a73e2e50"
-        verifierCredentials = [ (CKB.Address "ckt1qyqw2mw2tx493vhtcf5g7rzxggldfxtvn2ksdheprt", (8000, "pass"))
+        verifierCredentials = [ (CKB.Address "ckt1qyqw2mw2tx493vhtcf5g7rzxggldfxtvn2ksdheprt", (8003, "pass"))
                               , (CKB.Address "ckt1qyqxak478atwzfx0kqqa4sepnfqfgd7x2kesjy0v6k", (8001, "pass"))
                               , (CKB.Address "ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk", (8002, "pass"))
                               ]
