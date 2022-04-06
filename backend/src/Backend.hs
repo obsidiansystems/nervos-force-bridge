@@ -185,8 +185,11 @@ backend = Backend
       liftIO $ setCkbCliConfig 
       liftIO $ mapM startVerifier verifierCredentials
       liftIO $ print "hey"
+      forkIO $ flip runLoggingT (putDoc . renderWithSeverity pretty) $ runCollector myCollectorConfig
+      liftIO $ print "howdy"
       serve $ const $ return ()
-      flip runLoggingT (putDoc . renderWithSeverity pretty) $ runCollector myCollectorConfig
+
+      
       liftIO $ print "hello"
       
   , _backend_routeEncoder = fullRouteEncoder
