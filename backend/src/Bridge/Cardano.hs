@@ -22,20 +22,22 @@ import qualified Data.Map as Map
 import Bridge.Nervos.Cli (getAddressInfo)
 
 import Bridge.Utils
-import Bridge.Cardano.Types as Ada
+import Bridge.Cardano.Types (Address, LockTx(..), AssetType(..))
+import qualified Bridge.Cardano.Types as Ada
 import qualified Bridge.Cardano.Blockfrost as BF
 -- TODO Unify these
 import qualified Bridge.Nervos.Types as CKB
 import qualified Bridge.Nervos as CKB
+import Common.Bridge (CardanoBridgeMetadata(..), CKBAddress(..))
 
 getLockTxsAt :: BridgeM m => BF.ApiKey -> Address -> m [LockTx]
 getLockTxsAt key addr = do
   txHashes <- BF.getTransactions key addr
   mLocks <- for txHashes $ \hash -> do
-    mMeta <- BF.getTransactionMetadata key hash
+    mMeta :: Maybe CardanoBridgeMetadata <- BF.getTransactionMetadata key hash
     mScript <- case mMeta of
       Nothing -> pure Nothing
-      Just md -> fmap Just $ getAddressInfo $ CKB.Address $ mintToAddress md
+      Just md -> fmap Just $ getAddressInfo $ CKB.Address $ unCKBAddress $ mintToAddress md
     paid <- BF.getValuePaidTo key addr hash
     let lovelace = Map.findWithDefault 0 Ada paid
     pure $ (\scr -> LockTx hash scr lovelace) <$> mScript

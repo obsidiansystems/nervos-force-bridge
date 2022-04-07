@@ -45,7 +45,6 @@ library
                                           
   exposed-modules:
     Backend
-  other-modules:
     Backend.Utils
     Bridge
     Bridge.Cardano
