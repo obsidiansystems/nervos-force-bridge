@@ -1,5 +1,0 @@
-deployment = "deployment.toml"
-
-[[contracts]]
-name = "my-sudt"
-template_type = "Rust"
