@@ -280,22 +280,23 @@ runMintFlow cc manager ltx = do
     apiKey = collectorApiKey cc
     -- verifyTransaction envs req = mapM (runClientM $ requestSignature req) envs
 
-runCollector :: BridgeM m => CollectorConfig -> m ()
-runCollector cc = do
-  locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
-  logDebug $ "Got lock txns"
-  mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
-  logDebug $ "Got mints"
+runCollector :: CollectorConfig -> IO ()
+runCollector cc = forever $ do
+  runBridgeInFile "collector.log" $ do
+    locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
+    logDebug $ "Got lock txns"
+    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+    logDebug $ "Got mints"
 
-  let unMinted = getUnmintedLocks locks mints
+    let unMinted = getUnmintedLocks locks mints
 
-  logDebug $ "Found " <> (T.pack . show . length) unMinted <> " unminted lock transactions"
+    logDebug $ "Found " <> (T.pack . show . length) unMinted <> " unminted lock transactions"
 
-  -- TODO(skylar): Create manager one time and pass in, don't recreate after each invocation
-  manager <- liftIO $ newManager $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
-  -- TODO(skylar): Paralellize this a whole bunch
-  for_ unMinted (runMintFlow cc manager)
-
+    -- TODO(skylar): Create manager one time and pass in, don't recreate after each invocation
+    manager <- liftIO $ newManager $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
+    -- TODO(skylar): Paralellize this a whole bunch
+    for_ unMinted (runMintFlow cc manager)
+  threadDelay $ 120000000
   where
     multiSigAddress = collectorNervosMultisigAddress cc
     multiSigConfig = collectorMultiSigConfig cc

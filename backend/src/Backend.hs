@@ -213,7 +213,7 @@ backend = Backend
           registerVerifiers
 
         mapM_ startVerifier verifierCredentials
-        forkIO $ runBridgeInFile "test.log" $ runCollector myCollectorConfig
+        forkIO $ runCollector myCollectorConfig
 
 
       serve $ const $ return ()
