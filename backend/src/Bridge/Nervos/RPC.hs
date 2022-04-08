@@ -110,3 +110,9 @@ getTransactions = remote "get_transactions"
 -- TODO How to make this work with a custom type? Custom json instance??
 getTransaction :: JsonRpc m => T.Text -> m TxInfo
 getTransaction = remote "get_transaction"
+
+getLiveCells :: JsonRpc m => SearchKey -> Order -> T.Text -> m GetCellsResult
+getLiveCells = remote "get_cells"
+
+getLiveCells' :: JsonRpc m => SearchKey -> Order -> T.Text -> m Value
+getLiveCells' = remote "get_cells"

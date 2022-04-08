@@ -8,7 +8,9 @@
 
 module Bridge where
 
+import Control.Lens
 import Control.Monad
+import Control.Monad.Log
 import Control.Monad.IO.Class
 import Control.Concurrent (threadDelay)
 import Network.Web3.Provider (Provider)
@@ -16,13 +18,16 @@ import qualified Data.Text as T
 import Data.Maybe
 import qualified Data.Map as M
 
+import Data.Foldable
+import Data.Traversable
+
 import Data.Aeson
 import Data.Aeson.TH
 
 import Servant
 import Servant.Client (ClientM, client, ClientEnv, parseBaseUrl, mkClientEnv, runClientM, Scheme(Http)
                       , BaseUrl(BaseUrl), ClientError)
-import Network.HTTP.Client (Manager, newManager)
+import Network.HTTP.Client (Manager(..), newManager, managerResponseTimeout, responseTimeoutNone)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Network.Wai.Handler.Warp (run)
@@ -81,8 +86,8 @@ data VerifierConfig =
                  , verifierConfigIndexer :: Provider
 
                  , verifierNervosMultisigAddress :: CKB.Address
-
                  , verifierNervosPersonalAddress :: CKB.Address
+
                  , verifierNervosPassword :: T.Text
 
                  , verifierNervosDeployedScript :: CKB.DeployedScript
@@ -91,6 +96,8 @@ data VerifierConfig =
                  , verifierApiKey :: BF.ApiKey
                  -- TODO(galen): does a verifier need to know its own port?
                  , verifierConfigPort :: Int
+
+                 , verifierMultiSigConfigs :: MultiSigConfigs
                  }
   deriving (Eq)
 
@@ -141,32 +148,37 @@ requestSignature = client verifierApiProxy
 
 -- TODO(galen): properly set ports 
 handleSignatureRequest :: VerifierConfig -> Request -> Servant.Handler Response
-handleSignatureRequest vc (Request lockTx) =
-  liftIO $ runBridge $ do
+handleSignatureRequest vc (Request lockTx) = liftIO $ do
+  runBridgeInFile ("verifier" <>  show (verifierConfigPort vc) <> ".log") $ do
     locks <- Ada.getLockTxsAt apiKey $ verifierCardanoAddress vc
     mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
     let
       foundLock = isJust $ headMay $ filter (== lockTx) $ getUnmintedLocks locks mints
 
+    logDebug $ "Looking for locktx : " <> (T.pack . show) lockTx
+    logDebug $ "Looked up locktx found: " <> (T.pack . show) foundLock
     Response <$> case foundLock of
       False -> pure Nothing
       True -> do
-        txFile <- buildMintTxn multiSigAddress deployedScript lockTx
+        logDebug "Building and signing"
+        txFile <- buildMintTxn multiSigAddress verifiersMultiSig multiSigConfigs deployedScript lockTx
+        logDebug $ "Created tx file: " <> T.pack txFile
         signTxFile txFile sigAddress pass
+        logDebug $ "Decoding file to get signature: " <> T.pack txFile
         txn <- liftIO $ decodeFileStrict txFile
         case getFirstSignature =<< txn of 
-          Just sig -> pure . Just $ sig
-          Nothing -> pure Nothing
-
-
-        -- TODO(skylar): Extend the Signature/MultiSig Configs and signTxFile functions to get back the signature
-        -- return it here
-
+          Just sig -> do
+            logDebug "Successfully got signature"
+            pure . Just $ sig
+          Nothing -> do
+            logDebug $ "Failed to get signature from file: " <> T.pack txFile
+            pure Nothing
   where
     getFirstSignature (TxFile _ _ (Signatures map)) = headMay . snd =<< (headMay $ M.toList map)
     deployedScript = verifierNervosDeployedScript vc
     multiSigAddress = verifierNervosMultisigAddress vc
     sigAddress = verifierNervosPersonalAddress vc
+    multiSigConfigs = verifierMultiSigConfigs vc
     pass = verifierNervosPassword vc
 
     ckb = verifierConfigNode vc
@@ -195,23 +207,118 @@ getValidMintTxs txnsResponses = filter signaturesAtLeast2
 
 eitherToMaybe :: Either e a -> Maybe a
 eitherToMaybe (Right a) = Just a
-eitherToMaybe (Left _) = Nothing 
+eitherToMaybe (Left _) = Nothing
+
+{-
+What currently happens
+
+We identify locks without mints
+
+Get all signatures for all mints
+
+build transactions for all mints
+
+sign all mints
+
+send all mints
+-}
+
+-- TODO(skylar): This should really come from the verifiers config or something
+buildClientEnvs :: Manager -> [ClientEnv]
+buildClientEnvs manager =
+  [ myMkClientEnv 8009 manager "localhost"
+  , myMkClientEnv 8010 manager "localhost"
+  , myMkClientEnv 8011 manager "localhost"
+  ]
+
+-- TODO(skylar): How do we know this is actually in need of minting?
+-- actually the verifiers probably cover this case??
+runMintFlow :: BridgeM m => CollectorConfig -> Manager -> Ada.LockTx -> m ()
+runMintFlow cc manager ltx = do
+  responses <- liftIO $ for clientEnvs (runClientM $ requestSignature req)
+
+  let signatures =
+        catMaybes $ fmap (join . fmap responseSignature . eitherToMaybe) $ responses
+
+  logDebug $  "Responses: " <> (T.pack . show) responses
+
+  -- TODO(skylar): Big bad hardcode
+  case length signatures >= 2 of
+    False -> do
+        logDebug $ "Not enough signatures present for mint, abandoning: " <> (T.pack . show) signatures
+
+    True -> do
+      fp <- buildMintTxn multiSigAddress verifiersMultiSig multiSigConfig deployedScript ltx
+      mTxFile <- liftIO $ decodeFileStrict fp
+      case mTxFile of
+        Just txFile -> do
+          liftIO $ encodeFile fp $ txFile
+            & txFile_signatures .~
+              Signatures (M.fromList [((fst . head . M.toList $ multiSigMap), take 2 signatures)])
+          pure ()
+        Nothing -> do
+          logError "Failed to read tx file"
+          pure ()
+      logDebug $ "Submitting file: " <> T.pack fp
+      result <- submitTxFromFile fp
+      signalUsPlease result
+      pure ()
+  where
+    signalUsPlease (Just hash) = logDebug $ "Success: " <> hash
+    signalUsPlease Nothing = logError "Failed to submit tx file"
+
+    req = Request ltx
+    -- TODO(skylar): Can we share these across all runMintFlow operations
+    clientEnvs = buildClientEnvs manager
+    multiSigAddress = collectorNervosMultisigAddress cc
+    multiSigConfig = collectorMultiSigConfig cc
+    MultiSigConfigs multiSigMap = multiSigConfig
+    deployedScript = collectorNervosDeployedScript cc
+    ckb = collectorConfigNode cc
+    indexer = collectorConfigIndexer cc
+    verifierUrls = collectorVerifierUrls cc
+    apiKey = collectorApiKey cc
+    -- verifyTransaction envs req = mapM (runClientM $ requestSignature req) envs
 
 runCollector :: BridgeM m => CollectorConfig -> m ()
-runCollector vc = forever $ do
-  locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress vc
+runCollector cc = do
+  locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
+  logDebug $ "Got lock txns"
   mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+  logDebug $ "Got mints"
 
+  let unMinted = getUnmintedLocks locks mints
+
+  logDebug $ "Found " <> (T.pack . show . length) unMinted <> " unminted lock transactions"
+
+  -- TODO(skylar): Create manager one time and pass in, don't recreate after each invocation
+  manager <- liftIO $ newManager $ tlsManagerSettings { managerResponseTimeout = responseTimeoutNone }
+  -- TODO(skylar): Paralellize this a whole bunch
+  for_ unMinted (runMintFlow cc manager)
+
+  where
+    multiSigAddress = collectorNervosMultisigAddress cc
+    multiSigConfig = collectorMultiSigConfig cc
+    MultiSigConfigs multiSigMap = multiSigConfig
+    deployedScript = collectorNervosDeployedScript cc
+    ckb = collectorConfigNode cc
+    indexer = collectorConfigIndexer cc
+    verifierUrls = collectorVerifierUrls cc
+    apiKey = collectorApiKey cc
+{-
+  logDebug $ "Creating manager"
   manager <- liftIO $ newManager tlsManagerSettings
+
   let unMinted = getUnmintedLocks locks mints
 
       requestsToMint :: [Request] 
       requestsToMint = Request <$> unMinted 
 
-      -- TODO(galen): code this to zip with the 5 ports for starting the verifiers 
-      clientEnvs = [ myMkClientEnv 8003 manager "localhost"
-                   , myMkClientEnv 8001 manager "localhost"
-                   , myMkClientEnv 8002 manager "localhost"
+      -- TODO(galen): code this to zip with the 5 ports for starting the verifiers
+      -- TODO(skylar): This should come from the config
+      clientEnvs = [ myMkClientEnv 8009 manager "localhost"
+                   , myMkClientEnv 8010 manager "localhost"
+                   , myMkClientEnv 8011 manager "localhost"
                    ] 
         
       requestSignatures :: [Request] -> ClientM [Response]
@@ -224,9 +331,15 @@ runCollector vc = forever $ do
       verifyTransaction :: [ClientEnv] -> Request -> IO [Either ClientError Response]
       verifyTransaction envs req = mapM (runClientM $ requestSignature req) envs
 
+  logDebug $ "We have unminted locks: " <> (T.pack . show) unMinted
   -- represents list of lists_A where lists_A is a Maybe Signature; the inner list thererfore
   -- represents whether the transaction should succeed 
+  logDebug $ "Fetching signatures from verifers: "
+
+  -- TODO(skylar):
   responses <- liftIO $ mapM (verifyTransaction clientEnvs) requestsToMint
+
+  logDebug $ "Got responses from verifiers: " <> (T.pack . show) responses <> " building txn files"
   
   let
     -- TODO(galen): should we make this a set?
@@ -236,7 +349,7 @@ runCollector vc = forever $ do
     valid :: [(Ada.LockTx, [Signature])]
     valid = getValidMintTxs reqRes 
   
-  mintFilePaths <- mapM (buildMintTxn multiSigAddress deployedScript) $ fst <$> valid 
+  mintFilePaths <- mapM (buildMintTxn multiSigAddress verifiersMultiSig multiSigConfig deployedScript) $ fst <$> valid
 
   -- TODO(galen): make it very clear that the Ada.LockTx -> TxFile =is= ckb_mint 
   let
@@ -250,18 +363,25 @@ runCollector vc = forever $ do
         Just txn' -> do 
           liftIO $ encodeFile path
             $ TxFile txn' multiSigConfig
-            $ Signatures $ M.fromList [((fst . head . M.toList $ multiSigMap), signatures)]
-          pure $ Just path 
-        Nothing ->
-          pure Nothing 
+            $ Signatures
+            -- NOTE(skylar): We are assuming that not only there is a lock-arg here, but that it is the first one
+            -- we care about, this is likely fine.
+            $ M.fromList [((fst . head . M.toList $ multiSigMap), signatures)]
+          pure $ Just path
+        Nothing -> do
+          logError "Failed to read tx file"
+          pure Nothing
+
+    signalUsPlease (Just hash) = logDebug $ "Success: " <> hash
+    signalUsPlease Nothing = logError "Failed to submit tx file"
 
   maybeMintFilePaths <- mapM (\(fp, sigs) -> addSigsToTxFile sigs fp) toSign
-  mapM submitTxFromFile $ catMaybes maybeMintFilePaths 
- 
-  -- TODO(skylar): For each verifier call the requestSignature client function above, providing the endpoint
-  -- this will give you the list of signatures you need
+  for_ (catMaybes maybeMintFilePaths) $ \fp -> do
+    logDebug $ "Submitting file: " <> T.pack fp
+    result <- submitTxFromFile fp
+    signalUsPlease result
 
-  liftIO $ threadDelay 1000000
+  -- liftIO $ threadDelay 1000000
   pure ()
   where
     multiSigAddress = collectorNervosMultisigAddress vc
@@ -272,7 +392,7 @@ runCollector vc = forever $ do
     indexer = collectorConfigIndexer vc
     verifierUrls = collectorVerifierUrls vc 
     apiKey = collectorApiKey vc
-
+-}
 {-
 buildMintTx :: BridgeM m => Ada.LockTx -> m ()
 buildMintTx (Ada.LockTx _ _ _) = do

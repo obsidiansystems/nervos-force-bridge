@@ -33,6 +33,7 @@ import CKB.Utils
 import CKB.RPC
 import Control.Monad
 import Control.Monad.IO.Class
+import qualified Data.HexString as HS
 
 import GHC.Generics
 
@@ -485,7 +486,6 @@ buildMintTxFile (LockTx h s lovelace) = do
       s
       (Just deployedSUDT)
 
-    -- TODO(skylar): Make this amount a proper amount
-    mintOutputData = "0xe80300000000000000000000000000"
+    mintOutputData = "0x" <> (HS.toText . HS.fromBinary $ SUDTAmount $ fromIntegral lovelace)
 
     cellCost = ckb 24000
