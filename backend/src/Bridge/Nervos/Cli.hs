@@ -218,6 +218,7 @@ verifiersMultiSig =
 -- | Coin selection is the process of selecting which inputs we need to fund the transaction
 coinSelection :: BridgeM m => Script -> CKBytes -> m [LiveCell]
 coinSelection script amount = do
+  logDebug "Starting coin selection"
   -- TODO actual coin selection
   -- TODO Deterministic coin selection
   cells <- getLiveCells script
@@ -236,6 +237,7 @@ tx add-output --to-long-multisig-address ckt1qyqupxdfs66vv6jepvysz83mzwdltfe79eg
 -- TODO(skylar): Make this address configurable, or only take multisig addresses
 addChangeOutput :: BridgeM m => FilePath -> Address -> CKBytes -> CKBytes -> m ()
 addChangeOutput file (Address toAddr) ckbytes fee = do
+  logDebug "Adding change"
   let
     opts = [ "tx"
            , "add-output"
@@ -261,6 +263,7 @@ addChangeOutput file (Address toAddr) ckbytes fee = do
 
 addInput :: BridgeM m => FilePath -> LiveCell -> m ()
 addInput file (LiveCell _ hash index) = do
+  logDebug "Adding input"
   let
     opts = [ "tx"
            , "add-input"
@@ -294,6 +297,7 @@ addInput file (LiveCell _ hash index) = do
 -- TODO Make the relativeckbhome configurable or just assume the global one (which I don't wanna do)
 signTxFile :: BridgeM m => FilePath -> Address -> T.Text -> m ()
 signTxFile file (Address addr) pass = do
+  logDebug "Signing tx file"
   let
     opts = [ "tx"
            , "sign-inputs"
@@ -307,7 +311,6 @@ signTxFile file (Address addr) pass = do
            ]
   cp <- procCli (relativeCkbHome "ckb") opts
   result <- liftIO $ readCreateProcess cp (T.unpack pass)
-  -- logError $ "TEHE: " <> T.pack result
   pure ()
 
 buildMintTxn :: BridgeM m =>
@@ -320,6 +323,7 @@ buildMintTxn :: BridgeM m =>
              -> m FilePath
 buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
   (fname, _) <- liftIO $ openTempFile "." "tx.json"
+  logDebug $ "Building a mint tx" <> T.pack fname
   coins <- coinSelection script cellCost
   let
     tx =
@@ -375,6 +379,7 @@ buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s 
 
 submitTxFromFile :: BridgeM m => FilePath -> m (Maybe T.Text)
 submitTxFromFile file = do
+  logDebug "Submitting tx"
   let
     opts = [ "tx"
            , "send"
