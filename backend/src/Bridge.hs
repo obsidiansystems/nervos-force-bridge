@@ -226,9 +226,9 @@ send all mints
 -- TODO(skylar): This should really come from the verifiers config or something
 buildClientEnvs :: Manager -> [ClientEnv]
 buildClientEnvs manager =
-  [ myMkClientEnv 8009 manager "localhost"
-  , myMkClientEnv 8010 manager "localhost"
-  , myMkClientEnv 8011 manager "localhost"
+  [ myMkClientEnv 8119 manager "localhost"
+  , myMkClientEnv 8129 manager "localhost"
+  , myMkClientEnv 8139 manager "localhost"
   ]
 
 -- TODO(skylar): How do we know this is actually in need of minting?
