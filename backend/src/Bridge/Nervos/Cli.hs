@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -14,11 +15,14 @@ import System.Which
 import System.Directory
 import System.Process
 
+import Network.Web3.Provider
+
 import Control.Lens
 
 import Data.Aeson
 import Data.Aeson.TH
 import qualified Data.Text as T
+import qualified Data.HexString as HS
 
 import Data.Maybe
 import qualified Data.Map as M
@@ -31,23 +35,31 @@ import Bridge.Utils
 import qualified Bridge.Cardano.Types as Ada
 -- import qualified Bridge.Cardano as Ada
 import Bridge.Nervos.Types
+import Bridge.Nervos.SUDT
+
+-- TODO(skylar): We aren't really using cli for these calls,
+-- we just import this to make it work for now
+import qualified Bridge.Nervos.RPC as RPC
 
 ckbCliPath :: FilePath
 ckbCliPath = $(staticWhich "ckb-cli")
 
+-- TODO(skylar): Do not have this at all, or make it consistent
 procCli :: MonadIO m => FilePath -> [String] -> m CreateProcess
 procCli ckbCliDir args = liftIO $ do
   pure
-    $ addEnvironmentVariable ("CKB_CLI_HOME", ckbCliDir)
+    -- $ addEnvironmentVariable ("CKB_CLI_HOME", ckbCliDir)
     $ proc ckbCliPath args
 
+{-
 procWithCkbCliIn :: MonadIO m => FilePath -> FilePath -> FilePath -> [String] -> m CreateProcess
 procWithCkbCliIn ckbCliDir wd path args = liftIO $ do
   absoluteDir <- makeAbsolute ckbCliDir
   pure
-    $ addEnvironmentVariable ("CKB_CLI_HOME", absoluteDir)
+    -- $ addEnvironmentVariable ("CKB_CLI_HOME", absoluteDir)
     $ inDirectory wd
     $ proc path args
+-}
 
 addEnvironmentVariable :: (String, String) -> CreateProcess -> CreateProcess
 addEnvironmentVariable = addEnvironmentVariables . pure
@@ -61,20 +73,6 @@ relativeCkbHome = (<> "/.ckb-cli")
 
 inDirectory :: FilePath -> CreateProcess -> CreateProcess
 inDirectory fp cp = cp { cwd = Just fp }
-
-data LiveCell = LiveCell
-  { liveCell_capacity :: CKBytes
-  , liveCell_tx_hash :: T.Text
-  , liveCell_output_index :: Int
-  }
-  deriving (Eq, Show)
-
-data LiveCells = LiveCells
-  { liveCells_total_capacity :: CKBytes
-  , liveCells_total_count :: Int
-  , liveCells_live_cells :: [LiveCell]
-  }
-  deriving (Eq, Show)
 
 data Input = Input
   { input_since :: T.Text
@@ -123,7 +121,7 @@ newtype Signature =
   Signature { unSignature :: T.Text }
   deriving (Eq, Show)
 
-type LockArg = T.Text 
+type LockArg = T.Text
 
 -- instance ToJSON Signatures where
 --   toJSON = const $ object []
@@ -157,6 +155,12 @@ data AddressInfo =
 makeLenses ''TxFile
 makeLenses ''Txn
 
+instance ToJSON Signature where
+  toJSON (Signature t) = String t
+
+instance FromJSON Signature where
+  parseJSON = withText "Signature" (fmap Signature . pure)
+
 deriveJSON (scrubPrefix "input_") ''Input
 deriveJSON (scrubPrefix "output_") ''Output
 -- deriveJSON (scrubPrefix "depType_") ''DepType
@@ -164,10 +168,8 @@ deriveJSON (scrubPrefix "outPoint_") ''OutPoint
 deriveJSON (scrubPrefix "cellDep_") ''CellDep
 deriveJSON (scrubPrefix "_tx_") ''Txn
 deriveJSON (scrubPrefix "_txFile_") ''TxFile
-deriveJSON (scrubPrefix "liveCell_") ''LiveCell
-deriveJSON (scrubPrefix "liveCells_") ''LiveCells
 deriveJSON (scrubPrefix "addressInfo_") ''AddressInfo
-deriveJSON defaultOptions ''Signature
+-- deriveJSON defaultOptions ''Signature
 deriveJSON defaultOptions ''Signatures
 deriveJSON defaultOptions ''MultiSigConfig
 deriveJSON defaultOptions ''MultiSigConfigs
@@ -185,38 +187,59 @@ getAddressInfo (Address addr) = do
   result <- liftIO $ readProcess ckbCliPath opts ""
   pure $ maybe (error "Failed to decode address") (addressInfo_lock_script) $ decode . LBS.fromStrict . BS.pack $ result
 
-getLiveCells :: BridgeM m => Address -> m LiveCells
-getLiveCells (Address ta) = do
-  let
-    opts = [ "wallet"
-           , "get-live-cells"
-           , "--address"
-           , T.unpack ta
-           , "--output-format"
-           , "json"
-           ]
-  result <- liftIO $ readProcess ckbCliPath opts ""
-  pure $ maybe (error "Failed to fetch/decode live cells") (id) $ decode . LBS.fromStrict . BS.pack $ result
+ckbIndexerProvider :: Provider
+ckbIndexerProvider =
+  HttpProvider "http://obsidian.webhop.org:9116"
+
+getLiveCells :: BridgeM m => Script -> m [LiveCell]
+getLiveCells scr = do
+  {-
+  resultValue <- RPC.runIndexer ckbIndexerProvider (RPC.getLiveCells' searchKey RPC.Desc "0x64")
+  case resultValue of
+    Left _ -> pure ()
+    Right thing ->
+      liftIO $ encodeFile "get_cells.json" thing
+-}
+  result <- fmap getCellsResult_objects <$> RPC.runIndexer ckbIndexerProvider (RPC.getLiveCells searchKey RPC.Desc "0x64")
+  case result of
+    Left _ -> pure []
+    Right ls -> pure ls
+  where
+    searchKey = RPC.SearchKey scr RPC.Lock
+
+-- TODO IMPORTANT Make part of config
+verifiersMultiSig :: Script
+verifiersMultiSig =
+  Script
+  "0x5c5069eb0857efc65e1bca0c07df34c31663b3622fd3876c876320fc9634e2a8"
+  HashTypeType
+  "0xc099a986b4c66a590b09011e3b139bf5a73e2e50"
 
 -- | Coin selection is the process of selecting which inputs we need to fund the transaction
-coinSelection :: BridgeM m => Address -> CKBytes -> m [LiveCell]
-coinSelection addr amount = do
+coinSelection :: BridgeM m => Script -> CKBytes -> m [LiveCell]
+coinSelection script amount = do
   -- TODO actual coin selection
   -- TODO Deterministic coin selection
-  cells <- liveCells_live_cells <$> getLiveCells addr
+  cells <- getLiveCells script
   pure $ go cells amount
   where
     go :: [LiveCell] -> CKBytes -> [LiveCell]
     go (c:cs) left
       | left <= (shannons 0) = []
       | otherwise = [c] ++ go cs (diffCkb left (liveCell_capacity c))
+    go _ _ = []
 
+{-
+tx add-output --to-long-multisig-address ckt1qyqupxdfs66vv6jepvysz83mzwdltfe79egqa4geg5 --capacity 3000 --tx-file blank.json
+-}
+
+-- TODO(skylar): Make this address configurable, or only take multisig addresses
 addChangeOutput :: BridgeM m => FilePath -> Address -> CKBytes -> CKBytes -> m ()
 addChangeOutput file (Address toAddr) ckbytes fee = do
   let
     opts = [ "tx"
            , "add-output"
-           , "--to-sighash-address"
+           , "--to-short-multisig-address"
            , T.unpack toAddr
            , "--capacity"
            , show f
@@ -268,6 +291,7 @@ addInput file (LiveCell _ hash index) = do
 
 
 -- TODO (ckb cli config)
+-- TODO Make the relativeckbhome configurable or just assume the global one (which I don't wanna do)
 signTxFile :: BridgeM m => FilePath -> Address -> T.Text -> m ()
 signTxFile file (Address addr) pass = do
   let
@@ -286,16 +310,17 @@ signTxFile file (Address addr) pass = do
   -- logError $ "TEHE: " <> T.pack result
   pure ()
 
-
 buildMintTxn :: BridgeM m =>
                 Address
+             -> Script
+             -> MultiSigConfigs
                 -- ^ CKB Multisig address 
              -> DeployedScript
              -> Ada.LockTx
              -> m FilePath
-buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
+buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
   (fname, _) <- liftIO $ openTempFile "." "tx.json"
-  coins <- coinSelection addr cellCost
+  coins <- coinSelection script cellCost
   let
     tx =
       Txn
@@ -310,7 +335,7 @@ buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
     txFile =
       TxFile
       tx
-      (MultiSigConfigs mempty)
+      msconfig
       (Signatures mempty)
 
     totalCapacity = foldr (addCkb . liveCell_capacity) (shannons 0) coins
@@ -329,7 +354,6 @@ buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
                 & txFile_transaction . tx_outputs_data %~ (mintOutputData :)
                 & txFile_transaction . tx_cell_deps %~ (sudtDep :)
 
-      -- liftIO $ putStrLn "YABBA DABBA DO"
       liftIO $ encodeFile fname tx''
 
   -- TODO close the file
@@ -339,14 +363,15 @@ buildMintTxn addr (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
 
     mintOutput =
       Output
-      "0x22ecb25c000"
+      "0x9502f9000"
       s
       (Just sudt)
 
-    -- TODO(skylar): Make this amount a proper amount
-    mintOutputData = "0xe80300000000000000000000000000"
+    mintOutputData = "0x" <> (HS.toText . HS.fromBinary $ SUDTAmount $ fromIntegral lovelace)
 
-    cellCost = ckb 24000
+    cellCost = ckb 400
+
+-- tx add-multisig-config --sighash-address ckt1qyqw2mw2tx493vhtcf5g7rzxggldfxtvn2ksdheprt ckt1qyqxak478atwzfx0kqqa4sepnfqfgd7x2kesjy0v6k ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk --threshold 2 --tx-file
 
 submitTxFromFile :: BridgeM m => FilePath -> m (Maybe T.Text)
 submitTxFromFile file = do
@@ -379,3 +404,12 @@ emptyTxFile =
   emptyTxn
   (MultiSigConfigs mempty)
   (Signatures mempty) 
+
+-- | Used to see if the tx json matches internal haskell type
+parseAndWriteTxFile :: FilePath -> FilePath -> IO ()
+parseAndWriteTxFile input output = do
+  result :: Either String TxFile <- eitherDecodeFileStrict input
+  case result of
+    Left err -> putStrLn err
+    Right thing -> do
+      encodeFile output thing

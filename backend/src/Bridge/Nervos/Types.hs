@@ -1,13 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 -- | 
 
 module Bridge.Nervos.Types where
 
+import Data.Word
 import qualified Data.Text as T
+
+import GHC.Generics
 
 import Data.Aeson
 import Data.Aeson.TH
@@ -45,8 +50,12 @@ newtype Address =
   Address { unAddress :: T.Text }
   deriving (Eq, Show)
 
-deriveJSON defaultOptions ''Address
+instance FromJSON Address where
+  parseJSON =
+    withText "Address" (\t -> pure $ Address t)
 
+instance ToJSON Address where
+  toJSON (Address t) = String t
 
 newtype TxHash =
   TxHash { unTxHash :: T.Text }
@@ -72,6 +81,25 @@ data DepType =
 data CellDep = CellDep
   { cellDep_out_point :: OutPoint
   , cellDep_dep_type :: DepType
+  }
+  deriving (Eq, Show)
+
+data LiveCell = LiveCell
+  { liveCell_capacity :: CKBytes
+  , liveCell_tx_hash :: T.Text
+  , liveCell_output_index :: Int
+  }
+  deriving (Eq, Show, Generic)
+
+data GetCellsResult = GetCellsResult
+  { getCellsResult_objects :: [LiveCell]
+  }
+  deriving (Eq, Show)
+
+data LiveCells = LiveCells
+  { liveCells_total_capacity :: CKBytes
+  , liveCells_total_count :: Int
+  , liveCells_live_cells :: [LiveCell]
   }
   deriving (Eq, Show)
 
@@ -102,19 +130,16 @@ ckb n = CKBytes $ truncate $ n * ckbInShannons
 ckbytesToDouble :: CKBytes -> Double
 ckbytesToDouble (CKBytes s) = fromIntegral s / fromIntegral ckbInShannons
 
-
-
 deployedSUDT :: Script
 deployedSUDT = Script
-  "0x82a4784a46f42916f144bfd1926fda614560e403bc131408881de82fee0724ad"
-  HashTypeData -- "data"
-  "0x13146ce73ad549724291df1ecb476c6cc5837a9a1e5393728be71cba9b885027"
+  "0xc5e5dcf215925f7ef4dfaf5f4b4f105bc321c02776d6e7d52a1db3fcd9d011a4"
+  HashTypeType
+  "0x15cec0cbd70ba5a93d6e0620893cfe6159c9b3c7ce25dc8541f567fc19f03855"
 
 deployedSUDTDep :: CellDep
 deployedSUDTDep = CellDep
-  (OutPoint "0xb8e114fe03ca612c2987f56d6126c87a3aad3647156dbb8b2a16fc9888676776" "0x0")
+  (OutPoint "0xe12877ebd2c3c364dc46c5c992bcfaf4fee33fa13eebdf82c591fc9825aab769" "0x0")
   Code
-
 
 instance ToJSON HashType where
   toJSON dt = String $ case dt of
@@ -138,8 +163,30 @@ instance FromJSON DepType where
     "code" -> pure Code
     _ -> fail "Not a valid DepType"
 
+instance FromJSON LiveCell where
+  parseJSON = withObject "LiveCell" $ \o -> do
+    output <- o .: "output"
+    outPoint <- o .: "out_point"
+    -- NOTE we are parsing out a word64 from the 5 byte bytestring
+    mCap <- fromHexUtf8 . ("000000" <>) . T.drop 2 <$> output .: "capacity"
+    case mCap of
+      Nothing -> fail "Not a valid capacity"
+      Just (capacity :: Word64) -> do
+        hash <- outPoint .: "tx_hash"
+        -- IMPORTANT NOTE this will fail on bigger indices
+        mIndex :: Maybe Word8 <- fromHexUtf8 . ("0" <>) . T.drop 2 <$>  outPoint .: "index"
+        case mIndex of
+          Nothing -> fail "Not a valid index"
+          Just index ->
+            pure $ LiveCell (CKBytes $ toInteger capacity) hash (fromIntegral index)
 
+-- NOTE(skylar): This instance is not compatible with the FromJSON instance
+instance ToJSON LiveCell
+
+deriveJSON (scrubPrefix "getCellsResult_") ''GetCellsResult
 deriveJSON (scrubPrefix "script_") ''Script
+-- deriveJSON (scrubPrefix "liveCell_") ''LiveCell
+deriveJSON (scrubPrefix "liveCells_") ''LiveCells
 
 instance FromJSON CKBytes where
   parseJSON = withText "CKBytes" $ \t -> do

@@ -242,15 +242,16 @@ ckbProvider :: Provider
 ckbProvider =
   HttpProvider "http://obsidian.webhop.org:9114"
 
+-- TODO(skylar): Should be a config
 deployedSUDT :: Script
 deployedSUDT = Script
-  "0x82a4784a46f42916f144bfd1926fda614560e403bc131408881de82fee0724ad"
-  "data"
-  "0x13146ce73ad549724291df1ecb476c6cc5837a9a1e5393728be71cba9b885027"
+  "0xc5e5dcf215925f7ef4dfaf5f4b4f105bc321c02776d6e7d52a1db3fcd9d011a4"
+  "type"
+  "0x15cec0cbd70ba5a93d6e0620893cfe6159c9b3c7ce25dc8541f567fc19f03855"
 
 deployedSUDTDep :: CellDep
 deployedSUDTDep = CellDep
-  (OutPoint "0xb8e114fe03ca612c2987f56d6126c87a3aad3647156dbb8b2a16fc9888676776" "0x0")
+  (OutPoint "0xe12877ebd2c3c364dc46c5c992bcfaf4fee33fa13eebdf82c591fc9825aab769" "0x0")
   Code
 
 getTransactions :: JsonRpc m => SearchKey -> Order -> T.Text -> m SearchResults

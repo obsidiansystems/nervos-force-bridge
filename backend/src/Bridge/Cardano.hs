@@ -32,13 +32,20 @@ import Common.Bridge (CardanoBridgeMetadata(..), CKBAddress(..))
 
 getLockTxsAt :: BridgeM m => BF.ApiKey -> Address -> m [LockTx]
 getLockTxsAt key addr = do
+  -- logDebug "Getting lock txns"
   txHashes <- BF.getTransactions key addr
+  -- logDebug "Got here"
   mLocks <- for txHashes $ \hash -> do
     mMeta :: Maybe CardanoBridgeMetadata <- BF.getTransactionMetadata key hash
     mScript <- case mMeta of
       Nothing -> pure Nothing
-      Just md -> fmap Just $ getAddressInfo $ CKB.Address $ unCKBAddress $ mintToAddress md
+      Just md -> do
+        -- logDebug "Found lock metadata"
+        fmap Just $ getAddressInfo $ CKB.Address $ unCKBAddress $ mintToAddress md
     paid <- BF.getValuePaidTo key addr hash
     let lovelace = Map.findWithDefault 0 Ada paid
     pure $ (\scr -> LockTx hash scr lovelace) <$> mScript
-  pure $ catMaybes mLocks
+
+  let locks = catMaybes mLocks
+  logDebug $ "Found " <> (T.pack . show $ length locks) <> " lock txns"
+  pure locks

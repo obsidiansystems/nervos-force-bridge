@@ -47,17 +47,18 @@ defaultApiKey = ApiKey "testnetHf22J7FWl70gaYZljRwEFS7oE6mKuULF"  --  "testnetSZ
 -- TODO failure handling for blockfrost
 getTransactions :: BridgeM m => ApiKey -> Address -> m [TxHash]
 getTransactions (ApiKey k) (Address addr) = do
-  logDebug $ "Fetching transactions for address: " <> addr
+  -- logDebug $ "Fetching transactions for address: " <> addr
   let opts = defaults
              & header "project_id" .~ [k]
   r <- liftIO $ asJSON =<< getWith opts url
+  -- logDebug $ "Excuse me"
   pure $ r ^. responseBody
   where
     url = "https://cardano-testnet.blockfrost.io/api/v0/addresses/" <> T.unpack addr <> "/transactions"
 
 getTransactionMetadata :: (BridgeM m, FromJSON a, ToJSON a) => ApiKey -> TxHash -> m (Maybe a)
 getTransactionMetadata (ApiKey k) (TxHash hash) = do
-  logDebug $ "Fetching metadata for tx: " <> hash
+  -- logDebug $ "Fetching metadata for tx: " <> hash
   let opts = defaults
              & header "project_id" .~ [k]
   r <- liftIO $ getWith opts url
@@ -68,7 +69,7 @@ getTransactionMetadata (ApiKey k) (TxHash hash) = do
 -- TODO split into get UTXOS and something else...
 getValuePaidTo :: (BridgeM m) => ApiKey -> Address -> TxHash -> m (Map AssetType Integer)
 getValuePaidTo (ApiKey k) (Address addr) (TxHash hash) = do
-  logDebug $ "Fetching value paid to " <> addr <> " in tx: " <> hash
+  -- logDebug $ "Fetching value paid to " <> addr <> " in tx: " <> hash
   let opts = defaults
              & header "project_id" .~ [k]
   r <- liftIO $ asJSON =<< getWith opts url

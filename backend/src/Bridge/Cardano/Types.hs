@@ -26,7 +26,7 @@ newtype Address =
 
 newtype TxHash =
   TxHash { unTxHash :: T.Text }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 
 -- TODO(skylar): Steal this from cardano
 data AssetType
@@ -56,7 +56,9 @@ instance FromJSON TxHash where
   parseJSON = withObject "TxHash" $ \o ->
     TxHash <$> o .: "tx_hash"
 
-instance ToJSON TxHash
+instance ToJSON TxHash where
+  toJSON (TxHash h) = object [ "tx_hash" .= h
+                             ]
 
 deriveJSON defaultOptions ''LockTx
 deriveJSON defaultOptions ''AssetType
