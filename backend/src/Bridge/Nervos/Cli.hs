@@ -9,6 +9,7 @@ module Bridge.Nervos.Cli where
 
 import Data.Foldable
 
+import System.IO (hClose)
 import System.IO.Temp
 import System.Exit
 import System.Which
@@ -322,7 +323,8 @@ buildMintTxn :: BridgeM m =>
              -> Ada.LockTx
              -> m FilePath
 buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s lovelace) = do
-  (fname, _) <- liftIO $ openTempFile "." "tx.json"
+  (fname, handle) <- liftIO $ openTempFile "." "tx.json"
+  liftIO $ hClose handle
   logDebug $ "Building a mint tx" <> T.pack fname
   coins <- coinSelection script cellCost
   let
@@ -344,7 +346,9 @@ buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s 
 
     totalCapacity = foldr (addCkb . liveCell_capacity) (shannons 0) coins
 
-  liftIO $ encodeFile fname txFile
+  liftIO $ do
+    encodeFile fname txFile
+
   for_ coins (addInput fname)
   addChangeOutput fname addr (diffCkb totalCapacity cellCost) (ckb 0.0001)
 
@@ -360,7 +364,6 @@ buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s 
 
       liftIO $ encodeFile fname tx''
 
-  -- TODO close the file
   pure fname
   where
     fee = ckb 0.0001
