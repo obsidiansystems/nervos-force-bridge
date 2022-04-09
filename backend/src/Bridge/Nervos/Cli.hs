@@ -279,7 +279,6 @@ addInput file (LiveCell _ hash index) = do
            ]
 
   result <- liftIO $ readProcess ckbCliPath opts ""
-  logInfo $ "Result: " <> T.pack result
   pure ()
 
 -- More generally, when we sign, we sign *for* a given lock arg - so to put a signature we either

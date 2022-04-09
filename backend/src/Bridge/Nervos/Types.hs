@@ -168,7 +168,12 @@ instance FromJSON LiveCell where
     output <- o .: "output"
     outPoint <- o .: "out_point"
     -- NOTE we are parsing out a word64 from the 5 byte bytestring
-    mCap <- fromHexUtf8 . ("000000" <>) . T.drop 2 <$> output .: "capacity"
+    capStr <- output .: "capacity"
+    let
+      withoutPrefix = T.drop 2 capStr
+      padding = T.take (16 - T.length withoutPrefix) "0000000000000000"
+      mCap = fromHexUtf8 . (padding <>) $ withoutPrefix
+
     case mCap of
       Nothing -> fail "Not a valid capacity"
       Just (capacity :: Word64) -> do
