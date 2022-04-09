@@ -10,6 +10,7 @@ module Bridge.Nervos.Cli where
 import Data.Foldable
 
 import System.IO (hClose)
+import Control.Exception(SomeException, try)
 import System.IO.Temp
 import System.Exit
 import System.Which
@@ -278,7 +279,12 @@ addInput file (LiveCell _ hash index) = do
            , "json"
            ]
 
-  result <- liftIO $ readProcess ckbCliPath opts ""
+  r :: Either SomeException String <- liftIO $ try $ readProcess ckbCliPath opts ""
+  case r of
+    Left err ->
+      logDebug $ "Failed to sign: " <> (T.pack . show) err
+    Right _ ->
+      logDebug "Signing complete"
   pure ()
 
 -- More generally, when we sign, we sign *for* a given lock arg - so to put a signature we either
