@@ -228,7 +228,7 @@ buildClientEnvs :: Manager -> [ClientEnv]
 buildClientEnvs manager =
   [ myMkClientEnv 8119 manager "localhost"
   , myMkClientEnv 8129 manager "localhost"
-  , myMkClientEnv 8139 manager "localhost"
+  -- , myMkClientEnv 8139 manager "localhost"
   ]
 
 -- TODO(skylar): How do we know this is actually in need of minting?
