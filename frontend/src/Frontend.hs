@@ -344,10 +344,6 @@ frontend = Frontend
               elClass "div" "p-4 rounded-lg bg-white text-lg drop-shadow-lg font-semibold" $ text "Waiting for wallet signature"
 
             recentTransactionsFeed $ Nami.bridgeInTxHash <$> submitTx
--- <<<<<<< HEAD
--- =======
---               performEvent_ $ maybe (pure ()) (\a -> Nami.pay api a Nami.deepakBech32 1) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
--- >>>>>>> origin/add-fb-styling
           _ -> do
             text "You require nami wallet"
       pure ()
