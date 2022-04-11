@@ -168,7 +168,6 @@ registerVerifiers = do
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      -- flip runLoggingT (putDoc . renderWithSeverity pretty) $ runDevNode "ckb"
       let
         cardanoAddress = Ada.Address "addr_test1qqvyvv446w768jj42wxrh99mpmk5kd2qppst0yma8qesllldkdcxe8fngwj6m2f9uk5k8unf94tzzryz7kujnnew29xse6rxsu"
 
@@ -214,7 +213,6 @@ backend = Backend
 
         mapM_ startVerifier verifierCredentials
         forkIO $ runCollector myCollectorConfig
-
 
       serve $ const $ return ()
   , _backend_routeEncoder = fullRouteEncoder

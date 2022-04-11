@@ -58,6 +58,7 @@ in with pkgs.haskell.lib; {
       (import ./cardano-overlays { inherit haskellLib pkgs lib; }).combined
       (self: super: {
         snap-core = haskellLib.dontCheck (self.callCabal2nix "snap-core" sources.snap-core {}); # unreleased 1.0.4.3
+        reflex-dom-svg = haskellLib.doJailbreak (haskellLib.markUnbroken (super.reflex-dom-svg));
         map-syntax = haskellLib.doJailbreak super.map-syntax;
         xmlhtml = haskellLib.doJailbreak super.xmlhtml;
         # TODO: upstream

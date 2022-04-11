@@ -19,10 +19,20 @@ import Control.Applicative (liftA2)
 import Control.Lens
 import Data.Time
 import Data.Bool (bool)
-import Data.Maybe (isJust)
+import qualified Data.Map as Map
+import Data.Maybe (isJust, maybe)
 import qualified Data.Text as T
 import Language.Javascript.JSaddle ( MonadJSM
                                    , liftJSM
+                                   , toJSVal
+                                   , maybeNullOrUndefined
+                                   , MonadJSM
+                                   , ToJSVal
+                                   , JSVal
+                                   , JSM
+                                   , jsg
+                                   , js
+                                   , js1
                                    )
 
 import qualified Data.Map as Map
@@ -33,6 +43,19 @@ import Obelisk.Generated.Static
 
 import Reflex.Dom.Core hiding (now)
 
+import qualified Reflex.Dom.Widget.SVG as S
+import Reflex.Dom.Widget.SVG.Types (SVG_Rect)
+import qualified Reflex.Dom.Widget.SVG.Types as S
+import qualified Reflex.Dom.Widget.SVG.Types.SVG_Path as S
+import Control.Lens ((^?), (+~), (?~), (#), (^.), from, at, _Wrapped)
+import Data.Function ((&))
+import Data.Monoid (mempty, mappend)
+import Reflex (Dynamic)
+import Control.Monad.Fix (MonadFix)
+import qualified Data.List.NonEmpty as NE
+
+
+import Common.Api
 import Common.Route
 import Common.Bridge
 
@@ -53,6 +76,46 @@ tShow = T.pack . show
 -- | Flips the bridge direction
 changeBridgeDirection :: BridgeDirection -> BridgeDirection
 changeBridgeDirection _ = BridgeIn
+
+fbSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
+fbSvg = elAttr "img" ("src" =: $(static "svgs/forcebridgeLogo.svg") <> "class" =: "w-svg-logo h-svg-logo") blank
+
+svgClass = "w-svg h-svg inline"
+
+nervosSvg :: (PostBuild t m, DomBuilder t m) => m ()
+nervosSvg = elAttr "img" ("src" =: $(static "svgs/nervos.svg") <> "class" =: svgClass) blank
+
+cardanoSvg :: (PostBuild t m, DomBuilder t m) => m ()
+cardanoSvg = elAttr "img" ("src" =: $(static "svgs/cardano.svg") <> "class" =: svgClass) blank
+
+filledCircleArrowSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
+filledCircleArrowSvg = elAttr "img" ("src" =: $(static "svgs/filledCircleArrow.svg") <> "class" =: "w-svg-lg h-svg-lg") blank
+
+arrowSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
+arrowSvg = elAttr "img" ("src" =: $(static "svgs/arrow.svg") <> "class" =: svgClass) blank
+
+menuSvg :: (PostBuild t m, DomBuilder t m) => m ()
+menuSvg = elAttr "img" ("src" =: $(static "svgs/menu.svg") <> "class" =: svgClass) blank
+
+copySvg :: (PostBuild t m, DomBuilder t m) => m ()
+copySvg = elAttr "img" ("src" =: $(static "svgs/copy.svg") <> "class" =: svgClass) blank
+
+greenCheckmarkSvg :: (PostBuild t m, DomBuilder t m) => m ()
+greenCheckmarkSvg = elAttr "img" ("src" =: $(static "svgs/greenCheckmark.svg") <> "class" =: svgClass) blank
+
+copyToClipboard :: MonadJSM m => T.Text -> m ()
+copyToClipboard addr = liftJSM $ do
+
+  navJSVal <- jsg ("navigator" :: T.Text)
+  mNavigator <- maybeNullOrUndefined navJSVal
+
+  case mNavigator of
+    Nothing -> pure ()
+    Just nav -> do
+      nav ^. js ("clipboard" :: T.Text) . js1 ("writeText" :: T.Text) addr
+      pure ()
+
+  pure ()
 
 -- | Class for pretty printing of types
 class Pretty a where
@@ -82,13 +145,15 @@ form clearForm b direction = do
     balance = case direction of
       BridgeIn -> b
       _ -> 0
-
+  
   amount <- elClass "div" "border rounded-lg p-4 mb-4" $ do
     elClass "div" "flex flex-row items-center justify-between mb-4" $ do
       elClass "div" "flex flex-row items-center" $ do
         elClass "div" "mr-2 font-bold" $ text $ inChain direction
-        elClass "div" "bg-blue-400 px-2 py-1 rounded-lg text-sm font-bold text-white drop-shadow-md" $ text "Ada | ada"
-      elClass "div" "text-right text-blue-500 font-light" $ text $ "Max " <> tShow balance
+        elClass "div" "bg-primary px-2 py-1 rounded-lg text-sm font-bold text-white drop-shadow-md" $ do
+          el "span" cardanoSvg
+          text "Ada | ada"
+      elClass "div" "text-right text-primary font-light" $ text $ "Max " <> tShow balance
 
     ie <- inputElement $ def
       & initialAttributes .~ ("placeholder" =: "0.0"
@@ -98,11 +163,15 @@ form clearForm b direction = do
 
     pure $ readMaybe . T.unpack <$> _inputElement_value ie
 
+  elClass "div" "flex justify-center" filledCircleArrowSvg
+
   elClass "div" "border rounded-lg p-4 mb-4" $ do
     elClass "div" "flex flex-row items-center justify-between mb-2" $ do
       elClass "div" "flex flex-row items-center" $ do
         elClass "div" "mr-2 font-bold" $ text $ outChain direction
-        elClass "div" "bg-blue-100 px-2 py-1 rounded-lg text-sm font-bold drop-shadow-md" $ text "Ada | ada"
+        elClass "div" "select-none bg-gradient-to-r from-secondary to-secondary-end px-2 py-1 rounded-lg text-sm font-bold drop-shadow-md" $ do
+          el "span" cardanoSvg
+          text "Ada | ada"
 
       elClass "div" "text-right text-gray-400 font-light" $ text $ "Fee " <> "0.001"
 
@@ -112,12 +181,33 @@ form clearForm b direction = do
 
   pure amount
 
+
+truncateMiddleText :: T.Text -> Int -> T.Text
+truncateMiddleText s l
+  | length (T.unpack s) <= l = s
+  | l < 3 = s
+  | otherwise =
+    let
+      s' = T.unpack s
+      (a, b) = quotRem l 2
+      h = take a s'
+      t = drop (length s' - (a + b)) s'
+    in T.pack $ h <> "..." <> t
+
+truncateLength :: Int
+truncateLength = 20
+
+chainSvg :: (PostBuild t m, DomBuilder t m, MonadHold t m, MonadFix m) => T.Text -> m ()
+chainSvg "Nervos" = nervosSvg
+chainSvg "Cardano" = cardanoSvg
+
 -- | Main frontend component of force-bridge
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = do
       el "title" $ text "Force Bridge"
-      elAttr "script" ("src" =: "https://cdn.tailwindcss.com") blank
+      elAttr "link" ("href" =: $(static "favicon.ico") <> "rel" =: "icon") blank
+      elAttr "link" ("href" =: $(static "css/output.css") <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
       elAttr "script" ("src" =: $(static "js/app.bundle.js")) blank
   , _frontend_body = elClass "div" "flex flex-col w-screen h-screen text-gray-600 overflow-hidden" $ do
 
@@ -125,31 +215,63 @@ frontend = Frontend
         currentDirection <- foldDyn ($) BridgeIn changeEvent
 
         changeEvent <- elClass "div" "bg-white w-full p-4 drop-shadow-md items-center flex flex-row justify-between" $ do
-          elClass "h1" "font-semibold" $ text "Force Bridge Ob"
+          el "div" fbSvg
 
-          (buttonEl, _) <- elClass' "button" "rounded-md bg-blue-200 font-semibold text-black px-4 py-2 drop-shadow-md" $ do
-            dynText $ pretty <$> currentDirection
+          (buttonEl, _) <- elClass' "button" "font-bold rounded-md bg-gradient-to-r from-secondary to-secondary-end text-black px-4 py-2 drop-shadow-md" $ do
+            let dInChain = inChain <$> currentDirection
+                dOutChain = outChain <$> currentDirection
+            dyn_ $ chainSvg <$> dInChain
+            dynText $ dInChain
 
-          elClass "div" "" $ el "div" $ text "Menu"
+            arrowSvg
+
+            dyn_ $ chainSvg <$> dOutChain
+            dynText $ dOutChain
+
+          elClass "div" "rounded-md bg-gradient-to-r from-secondary to-secondary-end text-sm w-6 h-6 text-center" menuSvg
 
           pure $ changeBridgeDirection <$ domEvent Click buttonEl
-
-      elClass "div" "flex flex-col flex-grow bg-blue-100 justify-center items-center" $ prerender_ blank $ do
+  
+      elClass "div" "flex bg-gradient-to-br from-tertiary to-tertiary-end flex-grow justify-center items-center pt-36 pb-8" $ prerender_ blank $ do
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> mdo
-            (submitTx, waiting, _) <- elClass "div" "w-1/3 drop-shadow-xl bg-white rounded-lg p-4" $ mdo
+            (submitTx, waiting, _) <- elClass "div" "rounded-2xl w-90 bg-white p-6 shadow-md" $ mdo
               addr <- liftJSM $ Nami.getUsedAddress api
               balance <- liftJSM $ Nami.getBalance api
-              elClass "div" "bg-blue-200 px-4 py-2 rounded-lg mb-4 drop-shadow-md truncate" $ case addr of
+              elClass "div" "group relative select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 \
+                            \ rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
                 Nothing -> text "Loading wallet"
-                Just result -> text result
+                Just result -> do
+                  let copiedText True = "Copied"
+                      copiedText _ = "Copy"
+                      copiedSvg True = greenCheckmarkSvg
+                      copiedSvg _ = copySvg
+
+                  rec
+                    bCopiedAddr <- foldDyn (||) False copyAddrEvent
+
+                    copyAddrEvent <- elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                                                   \ break-all invisible group-hover:visible text-left" $ do
+                      elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
+
+                      elClass "span" "group-one relative ml-1" $ do
+                        elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                                      \ invisible group-one-hover:visible text-left" $ do
+                          elClass "div" "break-normal" $ dynText $ copiedText <$> bCopiedAddr
+
+                        (copyBtn, _) <- elClass' "button" "" $ dyn_ $ copiedSvg <$> bCopiedAddr
+
+                        performEvent_ $ copyToClipboard result <$ domEvent Click copyBtn
+                        pure $ True <$ domEvent Click copyBtn
+
+                  el "div" $ text $ truncateMiddleText result truncateLength
 
               amountThing <- dyn $ form (() <$ submitRequest) balance <$> currentDirection
               amount <- fmap join $ holdDyn (pure Nothing) amountThing
 
-              ckbAddress <- elClass "div" "border rounded-lg p-4" $ do
-                elClass "div" "text-bold" $ text "input address"
+              ckbAddress <- elClass "div" "border rounded-lg p-4 mb-4" $ do
+                elClass "div" "text-bold" $ text "Recipient:"
                 ie <- inputElement $ def
                   & initialAttributes .~ ("placeholder" =: "enter your ckb address"
                                         <> "class" =: "focus:outline-none text-gray-700"
@@ -166,8 +288,8 @@ frontend = Frontend
 
               let
                 mkBridgeButtonClasses b =
-                  T.intercalate " " [ "duration-500 transition-all w-full border rounded-lg px-4 py-2 font-semibold mt-4"
-                                    , bool "cursor-not-allowed bg-white" "bg-blue-400 drop-shadow-lg text-white border-transparent" b
+                  T.intercalate " " [ "duration-500 transition-all w-full border rounded-lg px-4 py-2 font-semibold"
+                                    , bool "cursor-not-allowed bg-white" "bg-primary drop-shadow-lg text-white border-transparent" b
                                     ]
 
               (submitButton, _) <- elDynClass' "button" (mkBridgeButtonClasses . checkAmount balance <$> amount) $ do
@@ -222,10 +344,12 @@ frontend = Frontend
               elClass "div" "p-4 rounded-lg bg-white text-lg drop-shadow-lg font-semibold" $ text "Waiting for wallet signature"
 
             recentTransactionsFeed $ Nami.bridgeInTxHash <$> submitTx
-
+-- <<<<<<< HEAD
+-- =======
+--               performEvent_ $ maybe (pure ()) (\a -> Nami.pay api a Nami.deepakBech32 1) addr <$ (gate (current $ isJust <$> amount) $ domEvent Click submitButton)
+-- >>>>>>> origin/add-fb-styling
           _ -> do
             text "You require nami wallet"
-
       pure ()
   }
 
