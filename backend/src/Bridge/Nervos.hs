@@ -53,4 +53,10 @@ getMints script (Tx cells outputs) = cs'
     cs' :: [MintTx]
     cs' =
       catMaybes
-      $ fmap (\(c, o) -> MintTx (cell_lock c) . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig o)) cs
+      $ fmap (\(c, o) ->
+                let
+                  -- a single hex char represents a nibble (half a byte)
+                  nibblesToSplitAt = 16 * 2;
+                  (mintAmount, txHash) = T.splitAt nibblesToSplitAt o
+                in MintTx (TxHash txHash) (cell_lock c)
+                    . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig mintAmount)) cs
