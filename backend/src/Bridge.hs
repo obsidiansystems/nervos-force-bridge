@@ -403,4 +403,5 @@ getUnmintedLocks :: [Ada.LockTx] -> [CKB.MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
   filter (\lt -> not $ any (comp lt) ms) ls
   where
-    comp (Ada.LockTx _ lscr v) (CKB.MintTx mscr v') = lscr == mscr && v == v'
+    comp (Ada.LockTx lhash lscr v) (CKB.MintTx mhash mscr v') = lscr == mscr && v == v'
+      && Ada.unTxHash lhash == CKB.unTxHash mhash

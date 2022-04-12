@@ -22,9 +22,9 @@ import Bridge.Utils
 import Data.Attoparsec.Text as A
 -- import GHC.Generics
 
--- TODO IMPORTANT What about the Tx hash
 data MintTx =
-  MintTx { mintTo :: Script
+  MintTx { txHash :: TxHash
+         , mintTo :: Script
          , mintAmount :: Integer
          }
   deriving (Eq, Show)
