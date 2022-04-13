@@ -19,12 +19,6 @@ import qualified Data.Text as T
 import Bridge.Nervos.Types
 import Bridge.Utils
 
-data SearchResults = SearchResults
-  { searchResults_last_cursor :: T.Text
-  , searchResults_objects :: [TxRecord]
-  }
-  deriving (Eq, Show)
-
 data ScriptType =
   Lock | Type
 
@@ -45,11 +39,6 @@ data SearchKey = SearchKey
   -- TODO Do we want a filter?
   }
 
-data TxRecord = TxRecord
-  { txRecord_tx_hash :: T.Text
-  }
-  deriving (Eq, Show)
-
 data Order = Asc | Desc
 
 instance ToJSON Order where
@@ -63,10 +52,7 @@ instance FromJSON Order where
     "desc" -> pure Desc
     t -> fail $ "Invalid order: " <> T.unpack t
 
-
-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
-deriveJSON (scrubPrefix "searchKey_") ''SearchKey
-deriveJSON (scrubPrefix "searchResults_") ''SearchResults
+ 
 
 runIndexer :: MonadIO m => Provider -> Web3 a -> m (Either Web3Error a)
 runIndexer p =

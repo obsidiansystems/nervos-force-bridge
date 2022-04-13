@@ -58,6 +58,7 @@ import qualified Data.List.NonEmpty as NE
 import Common.Route
 import Common.Bridge
 
+import Nervos
 import qualified Nami
 import Nami (BridgeInTx(..))
 
@@ -208,133 +209,43 @@ frontend = Frontend
       elAttr "link" ("href" =: $(static "favicon.ico") <> "rel" =: "icon") blank
       elAttr "link" ("href" =: $(static "css/output.css") <> "type" =: "text/css" <> "rel" =: "stylesheet") blank
       elAttr "script" ("src" =: $(static "js/app.bundle.js")) blank
-  , _frontend_body = elClass "div" "flex flex-col w-screen h-screen text-gray-600 overflow-hidden" $ do
-
+  , _frontend_body = elClass "div" "flex flex-col text-gray-600 h-screen" $ do --  w-screen h-screen 
       rec
         currentDirection <- foldDyn ($) BridgeIn changeEvent
-
         changeEvent <- elClass "div" "bg-white w-full p-4 drop-shadow-md items-center flex flex-row justify-between" $ do
           el "div" fbSvg
-
           (buttonEl, _) <- elClass' "button" "font-bold rounded-md bg-gradient-to-r from-secondary to-secondary-end text-black px-4 py-2 drop-shadow-md" $ do
             let dInChain = inChain <$> currentDirection
                 dOutChain = outChain <$> currentDirection
             dyn_ $ chainSvg <$> dInChain
             dynText $ dInChain
-
             arrowSvg
-
             dyn_ $ chainSvg <$> dOutChain
             dynText $ dOutChain
-
           elClass "div" "rounded-md bg-gradient-to-r from-secondary to-secondary-end text-sm w-6 h-6 text-center" menuSvg
-
           pure $ changeBridgeDirection <$ domEvent Click buttonEl
-  
-      elClass "div" "flex bg-gradient-to-br from-tertiary to-tertiary-end flex-grow justify-center items-center pt-36 pb-8" $ prerender_ blank $ do
+      --  "flex bg-gradient-to-br from-tertiary to-tertiary-end flex-grow justify-center items-center pt-36 pb-8"
+      elClass "div" "flex flex-col flex-grow bg-blue-100 justify-center items-center pt-36 pb-8" $ prerender_ blank $ do
         eApi <- liftJSM $ Nami.getApi
         case eApi of
           Right api -> mdo
-            (submitTx, waiting, _) <- elClass "div" "rounded-2xl w-90 bg-white p-6 shadow-md" $ mdo
-              addr <- liftJSM $ Nami.getUsedAddress api
-              balance <- liftJSM $ Nami.getBalance api
-              elClass "div" "group relative select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 \
-                            \ rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
-                Nothing -> text "Loading wallet"
-                Just result -> do
-                  let copiedText True = "Copied"
-                      copiedText _ = "Copy"
-                      copiedSvg True = greenCheckmarkSvg
-                      copiedSvg _ = copySvg
-
-                  rec
-                    bCopiedAddr <- foldDyn (||) False copyAddrEvent
-
-                    copyAddrEvent <- elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
-                                                   \ break-all invisible group-hover:visible text-left" $ do
-                      elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
-
-                      elClass "span" "group-one relative ml-1" $ do
-                        elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
-                                      \ invisible group-one-hover:visible text-left" $ do
-                          elClass "div" "break-normal" $ dynText $ copiedText <$> bCopiedAddr
-
-                        (copyBtn, _) <- elClass' "button" "" $ dyn_ $ copiedSvg <$> bCopiedAddr
-
-                        performEvent_ $ copyToClipboard result <$ domEvent Click copyBtn
-                        pure $ True <$ domEvent Click copyBtn
-
-                  el "div" $ text $ truncateMiddleText result truncateLength
-
-              amountThing <- dyn $ form (() <$ submitRequest) balance <$> currentDirection
-              amount <- fmap join $ holdDyn (pure Nothing) amountThing
-
-              ckbAddress <- elClass "div" "border rounded-lg p-4 mb-4" $ do
-                elClass "div" "text-bold" $ text "Recipient:"
-                ie <- inputElement $ def
-                  & initialAttributes .~ ("placeholder" =: "enter your ckb address"
-                                        <> "class" =: "focus:outline-none text-gray-700"
-                                       )
-                  & inputElementConfig_setValue .~ ("" <$ submitRequest)
-                pure $ _inputElement_value ie
-
-              let
-                hasError = (\x -> (not . isJust $ Nami.mkCKBAddress x) && (not $ T.null x)) <$> ckbAddress
-
-              dyn_ $ ffor hasError $ \case
-                True -> elClass "div" "text-red-300 text-sm pt-2" $ text "Not a valid ckb address"
-                False -> blank
-
-              let
-                mkBridgeButtonClasses b =
-                  T.intercalate " " [ "duration-500 transition-all w-full border rounded-lg px-4 py-2 font-semibold"
-                                    , bool "cursor-not-allowed bg-white" "bg-primary drop-shadow-lg text-white border-transparent" b
-                                    ]
-
-              (submitButton, _) <- elDynClass' "button" (mkBridgeButtonClasses . checkAmount balance <$> amount) $ do
-                dynText $ ffor (checkAmount balance <$> amount) $ \case
-                  True -> "Bridge"
-                  False -> "Enter an amount"
-
-              let
-                clickSubmit = domEvent Click submitButton
-                bridgeRequest = liftA2 Nami.BridgeRequest <$> amount <*> (Nami.mkCKBAddress <$> ckbAddress)
-                submitRequest = tagMaybe (current bridgeRequest) clickSubmit
-                submitFunc s =
-                  maybe (const $ pure $ Left Nami.TxSendFailure) (\a -> Nami.doPay api s a) addr
-
-                doSubmit = attachWith submitFunc (slot <$> current cb) submitRequest
-
-              submitting <- holdDyn False $ leftmost [ True <$ doSubmit
-                                                     , False <$ resultTx
-                                                     ]
-              resultTx <- performEvent doSubmit
-
-              err <- holdDyn Nothing $ Just <$> fmapMaybe (preview _Left) resultTx
-
-              dyn_ $ ffor err $ \case
-                Just msg -> elClass "div" "text-red-300 text-sm pt-2" $ text $ tShow msg
-                Nothing -> blank
-
-              pure $ (fmapMaybe (preview _Right) resultTx, submitting, err)
-
+            (submitTx, waiting, _) <- elClass "div" "rounded-2xl w-90 bg-white p-6 shadow-md" $ mkForm api currentDirection cb
             ct <- currentTime
             cb <- currentBlock
-
             elClass "div" "mt-4" $ mdo
-
               elClass "div" "ml-2 font-semibold text-lg text-gray-600 mb-1" $ text "Bridge Transactions"
               txs <- Nami.readTxs
               history <- foldDyn ($) txs $ mconcat [ (\x -> Map.insert (Nami.bridgeInTxHash x) x) <$> submitTx
                                                    , updates
                                                    ]
               performEvent_ $ Nami.writeTxs <$> updated history
-              updatesMap <- list history (bridgeInTx cb ct)
+              -- | I know for sure that if h-20 is set then the blue background doesnt go the whole way 
+              updatesMap <- elClass "div" "flex flex-col overflow-y-scroll h-44" $ do
+                list history (bridgeInTx cb ct)
               let
                 updates =
                   switchDyn $ mconcat . (fmap . fmap) (\(h, s) -> Map.update (\x -> Just $ x { bridgeInTxStatus = s }) h) . Map.elems <$> updatesMap
               pure ()
-
             let mkScrimClasses b  =
                   classList [ "absolute top-0 left-0 w-full h-full bg-gray-400/50 flex justify-center items-center"
                             , bool "opacity-0 pointer-events-none" "opacity-100 pointer-events-auto" b
@@ -347,6 +258,116 @@ frontend = Frontend
             text "You require nami wallet"
       pure ()
   }
+
+
+ckbAddressInput :: ( MonadFix m
+                   , MonadHold t m
+                   , PostBuild t m
+                   , PerformEvent t m
+                   , TriggerEvent t m
+                   , MonadIO (Performable m)
+                   , DomBuilder t m
+                   ) => Event t b -> m (Dynamic t T.Text)
+ckbAddressInput submitRequest = do
+  elClass "div" "text-bold" $ text "Recipient:"
+  ie <- inputElement $ def
+        & initialAttributes .~ ("placeholder" =: "enter your ckb address"
+                                 <> "class" =: "focus:outline-none text-gray-700"
+                               )
+        & inputElementConfig_setValue .~ ("" <$ submitRequest)
+  pure $ _inputElement_value ie
+
+mkForm :: ( MonadFix m
+          , MonadHold t m
+          , PostBuild t m
+          , PerformEvent t m
+          , TriggerEvent t m
+          , MonadIO (Performable m)
+          , DomBuilder t m
+          , MonadJSM m
+          , MonadJSM (Performable m)
+          )
+       => Nami.NamiApi
+       -> Dynamic t BridgeDirection
+       -> Dynamic t Block
+       -> m (Event t BridgeInTx, Dynamic t Bool, Dynamic t (Maybe Nami.NamiError)) 
+mkForm api currentDirection cb = mdo 
+  addr <- liftJSM $ Nami.getUsedAddress api
+  balance <- liftJSM $ Nami.getBalance api
+  elClass "div" "group relative select-none bg-gradient-to-r from-secondary to-secondary-end px-4 py-2 \
+                \ rounded-lg mb-4 drop-shadow-md text-black text-center font-bold" $ case addr of
+    Nothing -> text "Loading wallet"
+    Just result -> do
+      let copiedText True = "Copied"
+          copiedText _ = "Copy"
+          copiedSvg True = greenCheckmarkSvg
+          copiedSvg _ = copySvg
+
+      rec
+        bCopiedAddr <- foldDyn (||) False copyAddrEvent
+
+        copyAddrEvent <- elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                                       \ break-all invisible group-hover:visible text-left" $ do
+          elClass "span" "selection:bg-secondary selection:text-black select-all" $ text result
+
+          elClass "span" "group-one relative ml-1" $ do
+            elClass "div" "absolute left-0 rounded-lg bg-black text-white bg-opacity-75 bottom-full px-4 py-4 \
+                          \ invisible group-one-hover:visible text-left" $ do
+              elClass "div" "break-normal" $ dynText $ copiedText <$> bCopiedAddr
+
+            (copyBtn, _) <- elClass' "button" "" $ dyn_ $ copiedSvg <$> bCopiedAddr
+
+            performEvent_ $ copyToClipboard result <$ domEvent Click copyBtn
+            pure $ True <$ domEvent Click copyBtn
+
+      el "div" $ text $ truncateMiddleText result truncateLength
+
+  amountThing <- dyn $ form (() <$ submitRequest) balance <$> currentDirection
+  amount <- fmap join $ holdDyn (pure Nothing) amountThing
+
+  ckbAddress <- elClass "div" "border rounded-lg p-4 mb-4" $ ckbAddressInput submitRequest
+  let
+    hasError = (\x -> (not . isJust $ Nami.mkCKBAddress x) && (not $ T.null x)) <$> ckbAddress
+
+  dyn_ $ ffor hasError $ \case
+    True -> elClass "div" "text-red-300 text-sm pt-2" $ text "Not a valid ckb address"
+    False -> blank
+
+  let
+    mkBridgeButtonClasses b =
+      T.intercalate " " [ "duration-500 transition-all w-full border rounded-lg px-4 py-2 font-semibold"
+                        , bool "cursor-not-allowed bg-white" "bg-primary drop-shadow-lg text-white border-transparent" b
+                        ]
+
+  (submitButton, _) <- elDynClass' "button" (mkBridgeButtonClasses . checkAmount balance <$> amount) $ do
+    dynText $ ffor (checkAmount balance <$> amount) $ \case
+      True -> "Bridge"
+      False -> "Enter an amount"
+
+  let
+    clickSubmit = domEvent Click submitButton
+    bridgeRequest = liftA2 Nami.BridgeRequest <$> amount <*> (Nami.mkCKBAddress <$> ckbAddress)
+    submitRequest = tagMaybe (current bridgeRequest) clickSubmit
+    submitFunc s =
+      maybe (const $ pure $ Left Nami.TxSendFailure) (\a -> Nami.doPay api s a) addr
+
+    doSubmit = attachWith submitFunc (slot <$> current cb) submitRequest
+
+  submitting <- holdDyn False $ leftmost [ True <$ doSubmit
+                                         , False <$ resultTx
+                                         ]
+  resultTx <- performEvent doSubmit
+
+  err <- holdDyn Nothing $ Just <$> fmapMaybe (preview _Left) resultTx
+
+  dyn_ $ ffor err $ \case
+    Just msg -> elClass "div" "text-red-300 text-sm pt-2" $ text $ tShow msg
+    Nothing -> blank
+
+  pure $ (fmapMaybe (preview _Right) resultTx, submitting, err)
+
+
+
 
 -- | Widget that shows all recent transactions, removing them automatically after a 10 second interval
 recentTransactionsFeed :: ( MonadFix m
@@ -361,11 +382,11 @@ recentTransactionsFeed newHash = mdo
   tickEv <- dyn $ ffor (null <$> hashes) $ \case
     False -> tickLossyFromPostBuildTime 10
     True -> pure never
-  tick <-switchHold never tickEv
+  tick <- switchHold never tickEv
   hashes <- foldDyn ($) [] $ leftmost [ (:) <$> newHash
                                       , tail <$ tick
                                       ]
-  _ <- elClass "div" "absolute pointer-events-none top-0 left-0 w-full h-full overflow-hidden flex flex-col justify-start items-end p-4" $ do
+  _ <- elClass "div" "absolute pointer-events-none top-0 left-0 w-full h-full flex flex-col justify-start items-end p-4" $ do
       simpleList hashes txPrompt
   pure ()
 

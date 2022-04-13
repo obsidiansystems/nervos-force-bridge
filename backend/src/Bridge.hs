@@ -32,6 +32,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Network.Wai.Handler.Warp (run)
 
+import Common.Bridge 
 import Bridge.Utils
 
 import qualified Bridge.Nervos.Types as CKB
@@ -90,7 +91,7 @@ data VerifierConfig =
 
                  , verifierNervosPassword :: T.Text
 
-                 , verifierNervosDeployedScript :: CKB.DeployedScript
+                 , verifierNervosDeployedScript :: DeployedScript
                  , verifierCardanoAddress :: Ada.Address
 
                  , verifierApiKey :: BF.ApiKey
@@ -106,7 +107,7 @@ data CollectorConfig =
                   , collectorConfigIndexer :: Provider
                   
                   , collectorNervosMultisigAddress :: CKB.Address
-                  , collectorNervosDeployedScript :: CKB.DeployedScript
+                  , collectorNervosDeployedScript :: DeployedScript
 
                   , collectorCardanoAddress :: Ada.Address
 
@@ -151,7 +152,7 @@ handleSignatureRequest :: VerifierConfig -> Request -> Servant.Handler Response
 handleSignatureRequest vc (Request lockTx) = liftIO $ do
   runBridgeInFile ("verifier" <>  show (verifierConfigPort vc) <> ".log") $ do
     locks <- Ada.getLockTxsAt apiKey $ verifierCardanoAddress vc
-    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer $ deployedScriptScript deployedScript
     let
       foundLock = isJust $ headMay $ filter (== lockTx) $ getUnmintedLocks locks mints
 
@@ -285,7 +286,7 @@ runCollector cc = forever $ do
   runBridgeInFile "collector.log" $ do
     locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
     logDebug $ "Got lock txns"
-    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer $ deployedScriptScript deployedScript
     logDebug $ "Got mints"
 
     let unMinted = getUnmintedLocks locks mints
@@ -399,8 +400,8 @@ buildMintTx :: BridgeM m => Ada.LockTx -> m ()
 buildMintTx (Ada.LockTx _ _ _) = do
   pure ()
 -}
-getUnmintedLocks :: [Ada.LockTx] -> [CKB.MintTx] -> [Ada.LockTx]
+getUnmintedLocks :: [Ada.LockTx] -> [MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
   filter (\lt -> not $ any (comp lt) ms) ls
   where
-    comp (Ada.LockTx _ lscr v) (CKB.MintTx mscr v') = lscr == mscr && v == v'
+    comp (Ada.LockTx _ lscr v) (MintTx mscr v') = lscr == mscr && v == v'

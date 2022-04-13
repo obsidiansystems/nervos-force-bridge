@@ -177,7 +177,7 @@ backend = Backend
    --                           , (CKB.Address "ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk", (8139, "pass"))
                               ]
         verifierAddresses = fst <$> verifierCredentials 
-        deployedScript = CKB.DeployedScript CKB.deployedSUDT CKB.deployedSUDTDep
+        deployedScript = deployedCKBScript
         myMultiSigConfigs = MultiSigConfigs (fromList [(mSigLockArg
                                                        , MultiSigConfig verifierAddresses 0 2)])
         mkVerifierConfig (thisAddress, (port, password)) = VerifierConfig

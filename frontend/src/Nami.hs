@@ -72,6 +72,10 @@ type Ada = Double
 type Lovelace = Integer
 type V = JSVal
 
+-- | This is to suppress the error from taking it out of
+-- | Common.Bridge
+type Address = T.Text 
+
 data TransactionInput =
   TransactionInput { sender :: Address
                    , outputs :: [(Address, Ada)]

@@ -16,6 +16,7 @@ import Data.Aeson.TH
 
 import qualified Data.Text as T
 
+import Common.Bridge
 import Bridge.Nervos.Types
 import Bridge.Utils
 
@@ -37,58 +38,24 @@ data Tx = Tx
   }
   deriving (Eq, Show)
 
-data SearchResults = SearchResults
-  { searchResults_last_cursor :: T.Text
-  , searchResults_objects :: [TxRecord]
-  }
-  deriving (Eq, Show)
+-- data SearchResults = SearchResults
+--   { searchResults_last_cursor :: T.Text
+--   , searchResults_objects :: [TxRecord]
+--   }
+--   deriving (Eq, Show)
 
-data ScriptType =
-  Lock | Type
-
-instance ToJSON ScriptType where
-   toJSON = \case
-     Lock -> String "lock"
-     Type -> String "type"
-
-instance FromJSON ScriptType where
-  parseJSON = withText "ScriptType" $ \case
-    "lock" -> pure Lock
-    "type" -> pure Type
-    t -> fail $ "Invalid Script Type: " <> T.unpack t
-
-data SearchKey = SearchKey
-  { searchKey_script :: Script
-  , searchKey_script_type :: ScriptType
-  -- TODO Do we want a filter?
-  }
-
-data TxRecord = TxRecord
-  { txRecord_tx_hash :: T.Text
-  }
-  deriving (Eq, Show)
-
-data Order = Asc | Desc
-
-instance ToJSON Order where
-   toJSON = \case
-     Asc -> String "asc"
-     Desc -> String "desc"
-
-instance FromJSON Order where
-  parseJSON = withText "Order" $ \case
-    "asc" -> pure Asc
-    "desc" -> pure Desc
-    t -> fail $ "Invalid order: " <> T.unpack t
+-- data TxRecord = TxRecord
+--   { txRecord_tx_hash :: T.Text
+--   }
+--   deriving (Eq, Show)
 
 
-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
-deriveJSON (scrubPrefix "searchKey_") ''SearchKey
-deriveJSON (scrubPrefix "searchResults_") ''SearchResults
+--deriveJSON (scrubPrefix "txRecord_") ''TxRecord
+--deriveJSON (scrubPrefix "searchResults_") ''SearchResults
 deriveJSON (scrubPrefix "tx_") ''Tx
 deriveJSON (scrubPrefix "txInfo_") ''TxInfo
 deriveJSON (scrubPrefix "cell_") ''Cell
-
+ 
 {-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
 deriveJSON (scrubPrefix "searchKey_") ''SearchKey
 

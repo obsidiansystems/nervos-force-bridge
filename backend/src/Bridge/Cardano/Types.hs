@@ -6,6 +6,7 @@
 
 module Bridge.Cardano.Types where
 
+import Common.Bridge
 import GHC.Generics
 import Data.Traversable
 import Text.Read (readMaybe)
@@ -42,7 +43,7 @@ data TxOutput = TxOutput
 
 data LockTx =
   LockTx { lockTxHash :: TxHash
-         , lockTxLockScript :: CKB.Script
+         , lockTxLockScript :: Script -- CKB.Script previously
          , lockTxLovelace :: Integer
          }
   deriving (Eq, Show)

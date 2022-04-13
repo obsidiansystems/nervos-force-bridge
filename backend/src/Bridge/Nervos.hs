@@ -8,6 +8,7 @@
 
 module Bridge.Nervos where
 
+import Common.Bridge 
 import Data.Aeson
 import Data.Aeson.TH
 import qualified Data.Text as T
@@ -34,8 +35,8 @@ getMintTxsAt ckb indexer script = do
       pure []
     Right searchresults -> do
       allMints <- runCkb ckb $ do
-        fmap mconcat <$> for (searchResults_objects searchresults) $ \thing -> do
-          t <- getTransaction . txRecord_tx_hash $ thing
+        fmap mconcat <$> for (searchResults_objects searchresults) $ \txRecord -> do
+          t <- getTransaction . txRecord_tx_hash $ txRecord
           pure $ getMints script $ txInfo_transaction t
       case allMints of
         Left err -> do

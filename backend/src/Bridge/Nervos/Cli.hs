@@ -7,6 +7,8 @@
 
 module Bridge.Nervos.Cli where
 
+import Common.Bridge
+
 import Data.Foldable
 
 import System.IO (hClose)
@@ -166,8 +168,8 @@ instance FromJSON Signature where
 deriveJSON (scrubPrefix "input_") ''Input
 deriveJSON (scrubPrefix "output_") ''Output
 -- deriveJSON (scrubPrefix "depType_") ''DepType
-deriveJSON (scrubPrefix "outPoint_") ''OutPoint
-deriveJSON (scrubPrefix "cellDep_") ''CellDep
+
+
 deriveJSON (scrubPrefix "_tx_") ''Txn
 deriveJSON (scrubPrefix "_txFile_") ''TxFile
 deriveJSON (scrubPrefix "addressInfo_") ''AddressInfo
@@ -202,12 +204,12 @@ getLiveCells scr = do
     Right thing ->
       liftIO $ encodeFile "get_cells.json" thing
 -}
-  result <- fmap getCellsResult_objects <$> RPC.runIndexer ckbIndexerProvider (RPC.getLiveCells searchKey RPC.Desc "0x64")
+  result <- fmap getCellsResult_objects <$> RPC.runIndexer ckbIndexerProvider (RPC.getLiveCells searchKey Desc "0x64")
   case result of
     Left _ -> pure []
     Right ls -> pure ls
   where
-    searchKey = RPC.SearchKey scr RPC.Lock
+    searchKey = SearchKey scr Lock
 
 -- TODO IMPORTANT Make part of config
 verifiersMultiSig :: Script

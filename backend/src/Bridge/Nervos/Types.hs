@@ -19,31 +19,15 @@ import Data.Aeson.TH
 
 import Bridge.Utils
 
+
 import Data.Attoparsec.Text as A
 -- import GHC.Generics
-
--- TODO IMPORTANT What about the Tx hash
-data MintTx =
-  MintTx { mintTo :: Script
-         , mintAmount :: Integer
-         }
-  deriving (Eq, Show)
 
 newtype CKBytes =
   CKBytes { unCKBytes :: Integer }
   deriving (Eq, Show, Ord)
 
-data HashType =
-  HashTypeType | HashTypeData
-  deriving (Eq, Show)
-
 -- TODO Naming for everything that is json compatible
-data Script = Script
-  { script_code_hash :: T.Text
-  , script_hash_type :: HashType
-  , script_args :: T.Text
-  }
-  deriving (Eq, Show)
 
 -- TODO what about testnet vs mainnet
 newtype Address =
@@ -59,29 +43,6 @@ instance ToJSON Address where
 
 newtype TxHash =
   TxHash { unTxHash :: T.Text }
-  deriving (Eq, Show)
-
-data DeployedScript =
-  DeployedScript { deployedScriptScript :: Script
-                 , deployedScriptDep :: CellDep
-                 }
-  deriving (Eq)
-
-data OutPoint = OutPoint
-  {
-    outPoint_tx_hash :: T.Text
-  , outPoint_index :: T.Text
-  }
-  deriving (Eq, Show)
-
-data DepType =
-  Group | Code
-  deriving (Eq, Show)
-
-data CellDep = CellDep
-  { cellDep_out_point :: OutPoint
-  , cellDep_dep_type :: DepType
-  }
   deriving (Eq, Show)
 
 data LiveCell = LiveCell
@@ -130,39 +91,6 @@ ckb n = CKBytes $ truncate $ n * ckbInShannons
 ckbytesToDouble :: CKBytes -> Double
 ckbytesToDouble (CKBytes s) = fromIntegral s / fromIntegral ckbInShannons
 
-deployedSUDT :: Script
-deployedSUDT = Script
-  "0xc5e5dcf215925f7ef4dfaf5f4b4f105bc321c02776d6e7d52a1db3fcd9d011a4"
-  HashTypeType
-  "0x15cec0cbd70ba5a93d6e0620893cfe6159c9b3c7ce25dc8541f567fc19f03855"
-
-deployedSUDTDep :: CellDep
-deployedSUDTDep = CellDep
-  (OutPoint "0xe12877ebd2c3c364dc46c5c992bcfaf4fee33fa13eebdf82c591fc9825aab769" "0x0")
-  Code
-
-instance ToJSON HashType where
-  toJSON dt = String $ case dt of
-    HashTypeType -> "type"
-    HashTypeData -> "data"
-
-instance FromJSON HashType where
-  parseJSON = withText "HashType" $ \case
-    "type" -> pure HashTypeType
-    "data" -> pure HashTypeData
-    _ -> fail "Not a valid HashType"
-
-instance ToJSON DepType where
-  toJSON dt = String $ case dt of
-    Group -> "dep_group"
-    Code -> "code"
-
-instance FromJSON DepType where
-  parseJSON = withText "DepType" $ \case
-    "dep_group" -> pure Group
-    "code" -> pure Code
-    _ -> fail "Not a valid DepType"
-
 instance FromJSON LiveCell where
   parseJSON = withObject "LiveCell" $ \o -> do
     output <- o .: "output"
@@ -189,7 +117,6 @@ instance FromJSON LiveCell where
 instance ToJSON LiveCell
 
 deriveJSON (scrubPrefix "getCellsResult_") ''GetCellsResult
-deriveJSON (scrubPrefix "script_") ''Script
 -- deriveJSON (scrubPrefix "liveCell_") ''LiveCell
 deriveJSON (scrubPrefix "liveCells_") ''LiveCells
 
