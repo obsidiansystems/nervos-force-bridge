@@ -16,6 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Aeson
 import Data.Aeson.TH
+import Common.Bridge (AdaTxHash)
 
 import Bridge.Utils
 import qualified Bridge.Nervos.Types as CKB
@@ -25,9 +26,9 @@ newtype Address =
   Address { unAddress :: T.Text }
   deriving (Eq, Show)
 
-newtype TxHash =
-  TxHash { unTxHash :: T.Text }
-  deriving (Eq, Show)
+-- newtype TxHash =
+--   TxHash { unTxHash :: T.Text }
+--   deriving (Eq, Show)
 
 -- TODO(skylar): Steal this from cardano
 data AssetType
@@ -42,7 +43,7 @@ data TxOutput = TxOutput
   deriving (Eq, Show, Generic)
 
 data LockTx =
-  LockTx { lockTxHash :: TxHash
+  LockTx { lockTxHash :: AdaTxHash
          , lockTxLockScript :: Script -- CKB.Script previously
          , lockTxLovelace :: Integer
          }
@@ -53,12 +54,12 @@ data LockMetadata = LockMetadata
   }
   deriving (Eq, Show)
 
-instance FromJSON TxHash where
+instance FromJSON AdaTxHash where
   parseJSON = withObject "TxHash" $ \o ->
-    TxHash <$> o .: "tx_hash"
+    AdaTxHash <$> o .: "tx_hash"
 
-instance ToJSON TxHash where
-  toJSON (TxHash h) = object [ "tx_hash" .= h
+instance ToJSON AdaTxHash where
+  toJSON (AdaTxHash h) = object [ "tx_hash" .= h
                              ]
 
 deriveJSON defaultOptions ''LockTx

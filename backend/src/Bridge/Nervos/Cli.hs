@@ -381,7 +381,8 @@ buildMintTxn addr script msconfig (DeployedScript sudt sudtDep) (Ada.LockTx h s 
       s
       (Just sudt)
 
-    mintOutputData = "0x" <> (HS.toText . HS.fromBinary $ SUDTAmount $ fromIntegral lovelace)
+    sudtAmt = HS.toText . HS.fromBinary $ SUDTAmount $ fromIntegral lovelace
+    mintOutputData = "0x" <> sudtAmt <> unAdaTxHash h -- TODO(galen): change back to Ada.unAdaTxHash
 
     cellCost = ckb 400
 

@@ -37,6 +37,8 @@ import Bridge.Utils
 
 import qualified Bridge.Nervos.Types as CKB
 import qualified Bridge.Nervos as CKB
+-- TODO(galen): refactor Common into CKB, ADA, +internal
+--import qualified Common.Bridge.Nervos as CKB
 
 import qualified Bridge.Cardano.Blockfrost as BF
 -- TODO Unify these
@@ -404,4 +406,6 @@ getUnmintedLocks :: [Ada.LockTx] -> [MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
   filter (\lt -> not $ any (comp lt) ms) ls
   where
-    comp (Ada.LockTx _ lscr v) (MintTx mscr v') = lscr == mscr && v == v'
+    comp (Ada.LockTx lhash lscr v) (MintTx mhash mscr v') = lscr == mscr && v == v'
+      && unAdaTxHash lhash == unAdaTxHash mhash
+

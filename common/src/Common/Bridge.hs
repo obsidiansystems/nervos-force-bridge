@@ -14,16 +14,16 @@ import Bridge.Utils
 import Data.Aeson
 import Data.Aeson.TH
 
--- type Address = T.Text
+newtype AdaTxHash =
+  AdaTxHash { unAdaTxHash :: T.Text }
+  deriving (Eq, Show)
 
-
--- TODO IMPORTANT What about the Tx hash
 data MintTx =
-  MintTx { mintTo :: Script
+  MintTx { lockTxHash :: AdaTxHash
+         , mintTo :: Script
          , mintAmount :: Integer
          }
   deriving (Eq, Show)
-
 
 newtype CKBAddress =
   CKBAddress { unCKBAddress :: T.Text }
@@ -34,17 +34,14 @@ data CardanoBridgeMetadata = CardanoBridgeMetadata
    }
    deriving (Eq, Show)
 
-
 data DeployedScript =
   DeployedScript { deployedScriptScript :: Script
                  , deployedScriptDep :: CellDep
                  }
   deriving (Eq)
 
-
 data ScriptType =
   Lock | Type
-
 
 data SearchKey = SearchKey
   { searchKey_script :: Script
@@ -70,48 +67,17 @@ data Script = Script
   }
   deriving (Eq, Show)
 
-
 data Order = Asc | Desc
-
-
-
-instance ToJSON ScriptType where
-   toJSON = \case
-     Lock -> String "lock"
-     Type -> String "type"
-
-instance FromJSON ScriptType where
-  parseJSON = withText "ScriptType" $ \case
-    "lock" -> pure Lock
-    "type" -> pure Type
-    t -> fail $ "Invalid Script Type: " <> T.unpack t
-
-
-instance ToJSON Order where
-   toJSON = \case
-     Asc -> String "asc"
-     Desc -> String "desc"
-
-instance FromJSON Order where
-  parseJSON = withText "Order" $ \case
-    "asc" -> pure Asc
-    "desc" -> pure Desc
-    t -> fail $ "Invalid order: " <> T.unpack t
-
 
 data HashType =
   HashTypeType | HashTypeData
   deriving (Eq, Show)
-
-
 
 data CellDep = CellDep
   { cellDep_out_point :: OutPoint
   , cellDep_dep_type :: DepType
   }
   deriving (Eq, Show)
-
-
 
 data OutPoint = OutPoint
   {
@@ -124,6 +90,27 @@ data DepType =
   Group | Code
   deriving (Eq, Show)
 
+instance ToJSON ScriptType where
+   toJSON = \case
+     Lock -> String "lock"
+     Type -> String "type"
+
+instance FromJSON ScriptType where
+  parseJSON = withText "ScriptType" $ \case
+    "lock" -> pure Lock
+    "type" -> pure Type
+    t -> fail $ "Invalid Script Type: " <> T.unpack t
+
+instance ToJSON Order where
+   toJSON = \case
+     Asc -> String "asc"
+     Desc -> String "desc"
+
+instance FromJSON Order where
+  parseJSON = withText "Order" $ \case
+    "asc" -> pure Asc
+    "desc" -> pure Desc
+    t -> fail $ "Invalid order: " <> T.unpack t
 
 instance ToJSON DepType where
   toJSON dt = String $ case dt of
@@ -135,13 +122,6 @@ instance FromJSON DepType where
     "dep_group" -> pure Group
     "code" -> pure Code
     _ -> fail "Not a valid DepType"
-
-
-deriveJSON (scrubPrefix "outPoint_") ''OutPoint
-deriveJSON (scrubPrefix "searchKey_") ''SearchKey
-deriveJSON (scrubPrefix "searchResults_") ''SearchResults
-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
-deriveJSON (scrubPrefix "cellDep_") ''CellDep
 
 testContractAddress :: T.Text
 testContractAddress =
@@ -158,11 +138,8 @@ deployedSUDTDep = CellDep
   (OutPoint "0xe12877ebd2c3c364dc46c5c992bcfaf4fee33fa13eebdf82c591fc9825aab769" "0x0")
   Code
 
-
-
 deployedCKBScript :: DeployedScript
 deployedCKBScript = DeployedScript deployedSUDT deployedSUDTDep 
-
 
 instance ToJSON HashType where
   toJSON dt = String $ case dt of
@@ -175,10 +152,14 @@ instance FromJSON HashType where
     "data" -> pure HashTypeData
     _ -> fail "Not a valid HashType"
 
-
 deriveJSON defaultOptions ''Script
 deriveJSON defaultOptions ''CardanoBridgeMetadata
 deriveJSON defaultOptions ''CKBAddress
+deriveJSON (scrubPrefix "outPoint_") ''OutPoint
+deriveJSON (scrubPrefix "searchKey_") ''SearchKey
+deriveJSON (scrubPrefix "searchResults_") ''SearchResults
+deriveJSON (scrubPrefix "txRecord_") ''TxRecord
+deriveJSON (scrubPrefix "cellDep_") ''CellDep
 
 
 

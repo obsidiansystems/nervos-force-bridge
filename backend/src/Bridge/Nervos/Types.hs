@@ -41,10 +41,6 @@ instance FromJSON Address where
 instance ToJSON Address where
   toJSON (Address t) = String t
 
-newtype TxHash =
-  TxHash { unTxHash :: T.Text }
-  deriving (Eq, Show)
-
 data LiveCell = LiveCell
   { liveCell_capacity :: CKBytes
   , liveCell_tx_hash :: T.Text
