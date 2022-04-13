@@ -23,7 +23,7 @@ import Data.Attoparsec.Text as A
 -- import GHC.Generics
 
 data MintTx =
-  MintTx { txHash :: TxHash
+  MintTx { lockTxHash :: TxHash
          , mintTo :: Script
          , mintAmount :: Integer
          }
