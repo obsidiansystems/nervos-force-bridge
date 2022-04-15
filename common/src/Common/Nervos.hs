@@ -28,7 +28,7 @@ data CkbTxInfo = CkbTxInfo
   deriving (Eq, Show)
 
 data Tx = Tx
-  { tx_output_cells :: [Cell]
+  { tx_outputs :: [Cell]
   , tx_outputs_data :: [T.Text]
   }
   deriving (Eq, Show)
@@ -154,7 +154,7 @@ instance FromJSON HashType where
     "data" -> pure HashTypeData
     _ -> fail "Not a valid HashType"
  
-deriveJSON defaultOptions ''Script
+deriveJSON (scrubPrefix "script_") ''Script
 deriveJSON (scrubPrefix "outPoint_") ''OutPoint
 deriveJSON (scrubPrefix "searchKey_") ''SearchKey
 deriveJSON (scrubPrefix "searchResults_") ''SearchResults
