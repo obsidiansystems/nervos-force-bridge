@@ -15,18 +15,13 @@ module Bridge.Utils ( module E
                     ) where
 
 import System.IO
-import Control.Monad
 import Control.Monad.Log as E
 import Control.Monad.IO.Class as E
 import qualified Data.Text as T
 
 import Data.Binary
-import Data.Binary.Put
-import Data.Binary.Get
 import Data.HexString
 
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Encoding as T
 
 import qualified Data.ByteString as BS

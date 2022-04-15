@@ -18,45 +18,24 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Exception (SomeException, try)
 import Common.Route
-import Common.Bridge
 import Bridge.Utils
 import Bridge.Cardano.Blockfrost (defaultApiKey)
 import qualified Bridge.Cardano.Types as Ada
 import qualified Bridge.Nervos.Types as CKB -- (Address(..), DeployedScript(..), deployedSUDT, deployedSUDTDep)
+import qualified Common.Nervos as CKB
 import Bridge.Nervos.Cli (MultiSigConfigs(..), MultiSigConfig(..), ckbCliPath)
 
-import Backend.Utils
-
 import Obelisk.Backend
-import Data.ByteString (ByteString)
 
-import Data.Maybe
-import Data.Map (Map, fromList)
-import qualified Data.Map as Map
-
-import Control.Lens
-import Control.Monad.Log
-import Network.Wreq
-
-import Network.Web3
-import Network.Web3.Provider
-import Network.JsonRpc.TinyClient
+import Data.Map (fromList)
 import Network.Wai.Handler.Warp (run, Port)
 import Control.Concurrent (forkIO)
 import System.Process
 
-import Data.Aeson
-import Data.Aeson.TH
-import Data.Aeson.Lens
-
 import Data.Foldable
-import Data.Traversable
-import Prettyprinter (pretty)
-import Prettyprinter.Render.Text (putDoc, hPutDoc)
 
 import qualified Data.Text as T
 
-import CKB
 import CKB.RPC hiding (deployedSUDT, deployedSUDTDep)
 
 {-
@@ -177,7 +156,7 @@ backend = Backend
    --                           , (CKB.Address "ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk", (8139, "pass"))
                               ]
         verifierAddresses = fst <$> verifierCredentials 
-        deployedScript = deployedCKBScript
+        deployedScript = CKB.deployedCKBScript
         myMultiSigConfigs = MultiSigConfigs (fromList [(mSigLockArg
                                                        , MultiSigConfig verifierAddresses 0 2)])
         mkVerifierConfig (thisAddress, (port, password)) = VerifierConfig

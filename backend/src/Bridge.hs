@@ -25,9 +25,9 @@ import Data.Aeson
 import Data.Aeson.TH
 
 import Servant
-import Servant.Client (ClientM, client, ClientEnv, parseBaseUrl, mkClientEnv, runClientM, Scheme(Http)
+import Servant.Client (ClientM, client, ClientEnv, mkClientEnv, runClientM, Scheme(Http)
                       , BaseUrl(BaseUrl), ClientError)
-import Network.HTTP.Client (Manager(..), newManager, managerResponseTimeout, responseTimeoutNone)
+import Network.HTTP.Client (Manager, newManager, managerResponseTimeout, responseTimeoutNone)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Network.Wai.Handler.Warp (run)
@@ -37,8 +37,7 @@ import Bridge.Utils
 
 import qualified Bridge.Nervos.Types as CKB
 import qualified Bridge.Nervos as CKB
--- TODO(galen): refactor Common into CKB, ADA, +internal
---import qualified Common.Bridge.Nervos as CKB
+import qualified Common.Nervos as CKB
 
 import qualified Bridge.Cardano.Blockfrost as BF
 -- TODO Unify these
@@ -93,7 +92,7 @@ data VerifierConfig =
 
                  , verifierNervosPassword :: T.Text
 
-                 , verifierNervosDeployedScript :: DeployedScript
+                 , verifierNervosDeployedScript :: CKB.DeployedScript
                  , verifierCardanoAddress :: Ada.Address
 
                  , verifierApiKey :: BF.ApiKey
@@ -109,7 +108,7 @@ data CollectorConfig =
                   , collectorConfigIndexer :: Provider
                   
                   , collectorNervosMultisigAddress :: CKB.Address
-                  , collectorNervosDeployedScript :: DeployedScript
+                  , collectorNervosDeployedScript :: CKB.DeployedScript
 
                   , collectorCardanoAddress :: Ada.Address
 
@@ -154,7 +153,7 @@ handleSignatureRequest :: VerifierConfig -> Request -> Servant.Handler Response
 handleSignatureRequest vc (Request lockTx) = liftIO $ do
   runBridgeInFile ("verifier" <>  show (verifierConfigPort vc) <> ".log") $ do
     locks <- Ada.getLockTxsAt apiKey $ verifierCardanoAddress vc
-    mints <- CKB.getMintTxsAt ckb indexer $ deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
     let
       foundLock = isJust $ headMay $ filter (== lockTx) $ getUnmintedLocks locks mints
 
@@ -288,7 +287,7 @@ runCollector cc = forever $ do
   runBridgeInFile "collector.log" $ do
     locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
     logDebug $ "Got lock txns"
-    mints <- CKB.getMintTxsAt ckb indexer $ deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
     logDebug $ "Got mints"
 
     let unMinted = getUnmintedLocks locks mints
@@ -402,10 +401,10 @@ buildMintTx :: BridgeM m => Ada.LockTx -> m ()
 buildMintTx (Ada.LockTx _ _ _) = do
   pure ()
 -}
-getUnmintedLocks :: [Ada.LockTx] -> [MintTx] -> [Ada.LockTx]
+getUnmintedLocks :: [Ada.LockTx] -> [CKB.MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
   filter (\lt -> not $ any (comp lt) ms) ls
   where
-    comp (Ada.LockTx lhash lscr v) (MintTx mhash mscr v') = lscr == mscr && v == v'
+    comp (Ada.LockTx lhash lscr v) (CKB.MintTx mhash mscr v') = lscr == mscr && v == v'
       && unAdaTxHash lhash == unAdaTxHash mhash
 

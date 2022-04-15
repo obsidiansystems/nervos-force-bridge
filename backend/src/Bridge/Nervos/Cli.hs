@@ -8,6 +8,7 @@
 module Bridge.Nervos.Cli where
 
 import Common.Bridge
+import Common.Nervos hiding (tx_outputs_data) -- TODO(galen): rename this
 
 import Data.Foldable
 
@@ -16,7 +17,6 @@ import Control.Exception(SomeException, try)
 import System.IO.Temp
 import System.Exit
 import System.Which
-import System.Directory
 import System.Process
 
 import Network.Web3.Provider
@@ -28,7 +28,6 @@ import Data.Aeson.TH
 import qualified Data.Text as T
 import qualified Data.HexString as HS
 
-import Data.Maybe
 import qualified Data.Map as M
 
 import qualified Data.ByteString.Char8 as BS

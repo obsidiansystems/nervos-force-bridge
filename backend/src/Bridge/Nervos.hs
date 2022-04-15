@@ -3,19 +3,17 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
-
+  
 -- | 
 
 module Bridge.Nervos where
 
-import Common.Bridge 
-import Data.Aeson
-import Data.Aeson.TH
+import Common.Bridge
+import Common.Nervos
 import qualified Data.Text as T
 import Data.Traversable
 import Bridge.Utils
 
-import Bridge.Nervos.Types
 -- TODO delete indexer keep RPC
 import Bridge.Nervos.RPC
 import Network.Web3.Provider (Provider)

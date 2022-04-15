@@ -6,7 +6,10 @@
 
 module Bridge.Cardano.Types where
 
-import Common.Bridge
+import Common.Bridge 
+import Common.Cardano
+import Common.Nervos
+
 import GHC.Generics
 import Data.Traversable
 import Text.Read (readMaybe)
@@ -16,7 +19,6 @@ import qualified Data.Map as Map
 import qualified Data.Text as T
 import Data.Aeson
 import Data.Aeson.TH
-import Common.Bridge (AdaTxHash)
 
 import Bridge.Utils
 import qualified Bridge.Nervos.Types as CKB

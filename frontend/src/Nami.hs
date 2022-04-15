@@ -14,7 +14,8 @@ import Promise
 
 import Data.Time
 
-import Common.Bridge
+import Common.Cardano
+import Common.Bridge 
 
 import Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -31,25 +32,18 @@ import Language.Javascript.JSaddle ( eval
                                    , liftJSM
                                    , ghcjsPure
                                    , MonadJSM
-
                                    , ToJSVal
-
                                    , jsUndefined
-
                                    , fromJSValUnchecked
                                    , fromJSVal
                                    , isNull
                                    , isUndefined
-                                   , obj
-                                   , (<#)
-
                                    , js
                                    , jsg
                                    , js0
                                    , js1
                                    , js2
                                    , js3
-
                                    , MakeObject
                                    , JSM
                                    )
@@ -94,7 +88,7 @@ data BridgeRequest =
 
 type TxHash = T.Text
 
-
+-- NOTE(galen): this is where I could affect the time with little disruption to the data structure 
 data Status
   = LockSubmitted
   | LockAwaitingConfirmations Int
@@ -112,7 +106,8 @@ mkCKBAddress t
 data BridgeInTx =
   BridgeInTx { bridgeInAmount :: Double
              , bridgeInToAddress :: CKBAddress
-             , bridgeInTxHash :: TxHash
+             , bridgeInTxHash :: TxHash -- TODO(galen): Change to AdaTxHash newtype in Common/
+             -- , bridgeInCkbHash :: CkbTxHash
              , bridgeInTxStatus :: Status
              , bridgeInStart :: UTCTime
              }

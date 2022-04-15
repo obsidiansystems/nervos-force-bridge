@@ -16,27 +16,9 @@ import Data.Aeson.TH
 
 import qualified Data.Text as T
 
-import Common.Bridge
+import Common.Nervos
 import Bridge.Nervos.Types
 import Bridge.Utils
-
-data Cell = Cell
-  { cell_capacity :: T.Text
-  , cell_lock :: Script
-  , cell_type :: Maybe Script
-  }
-  deriving (Eq, Show)
-
-data TxInfo = TxInfo
-  { txInfo_transaction :: Tx
-  }
-  deriving (Eq, Show)
-
-data Tx = Tx
-  { tx_outputs :: [Cell]
-  , tx_outputs_data :: [T.Text]
-  }
-  deriving (Eq, Show)
 
 -- data SearchResults = SearchResults
 --   { searchResults_last_cursor :: T.Text
@@ -52,9 +34,6 @@ data Tx = Tx
 
 --deriveJSON (scrubPrefix "txRecord_") ''TxRecord
 --deriveJSON (scrubPrefix "searchResults_") ''SearchResults
-deriveJSON (scrubPrefix "tx_") ''Tx
-deriveJSON (scrubPrefix "txInfo_") ''TxInfo
-deriveJSON (scrubPrefix "cell_") ''Cell
  
 {-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
 deriveJSON (scrubPrefix "searchKey_") ''SearchKey
@@ -75,7 +54,7 @@ getTransactions :: JsonRpc m => SearchKey -> Order -> T.Text -> m SearchResults
 getTransactions = remote "get_transactions"
 
 -- TODO How to make this work with a custom type? Custom json instance??
-getTransaction :: JsonRpc m => T.Text -> m TxInfo
+getTransaction :: JsonRpc m => T.Text -> m CkbTxInfo
 getTransaction = remote "get_transaction"
 
 getLiveCells :: JsonRpc m => SearchKey -> Order -> T.Text -> m GetCellsResult

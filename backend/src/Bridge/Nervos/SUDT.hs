@@ -8,13 +8,11 @@ module Bridge.Nervos.SUDT where
 import Data.Binary
 import Data.Binary.Put
 import Data.Binary.Get
-import Data.HexString
+
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Encoding as T
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import Basement.Types.Word128 hiding ((-))

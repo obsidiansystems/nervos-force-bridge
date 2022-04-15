@@ -7,13 +7,9 @@
 
 module Bridge.Cardano where
 
-import Control.Monad.IO.Class
 import qualified Data.Text as T
 
 import Data.Maybe
-import Data.Aeson
-import Data.Aeson.TH
-
 import Data.Traversable
 
 -- import Data.Map (Map)
@@ -23,12 +19,12 @@ import Bridge.Nervos.Cli (getAddressInfo)
 
 import Bridge.Utils
 import Bridge.Cardano.Types (Address, LockTx(..), AssetType(..))
-import qualified Bridge.Cardano.Types as Ada
 import qualified Bridge.Cardano.Blockfrost as BF
 -- TODO Unify these
 import qualified Bridge.Nervos.Types as CKB
-import qualified Bridge.Nervos as CKB
-import Common.Bridge (CardanoBridgeMetadata(..), CKBAddress(..))
+
+import Common.Cardano (CardanoBridgeMetadata(..))
+import Common.Bridge (CKBAddress(..))
 
 getLockTxsAt :: BridgeM m => BF.ApiKey -> Address -> m [LockTx]
 getLockTxsAt key addr = do
