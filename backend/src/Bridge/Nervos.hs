@@ -56,6 +56,6 @@ getMints script (Tx cells outputs) = cs'
                 let
                   -- a single hex char represents a nibble (half a byte)
                   nibblesToSplitAt = 16 * 2;
-                  (mintAmount, txHash) = T.splitAt nibblesToSplitAt o
+                  (mintAmt, txHash) = T.splitAt nibblesToSplitAt o
                 in MintTx (AdaTxHash txHash) (cell_lock c)
-                    . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig mintAmount)) cs
+                    . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig mintAmt)) cs
