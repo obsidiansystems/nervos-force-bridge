@@ -28,7 +28,7 @@ data CkbTxInfo = CkbTxInfo
   deriving (Eq, Show)
 
 data Tx = Tx
-  { tx_outputs :: [Cell]
+  { tx_output :: [Cell]
   , tx_outputs_data :: [T.Text]
   }
   deriving (Eq, Show)
