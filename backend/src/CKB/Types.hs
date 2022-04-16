@@ -35,6 +35,9 @@ ckbPath = $(staticWhich "ckb")
 ckbCliPath :: FilePath
 ckbCliPath = $(staticWhich "ckb-cli")
 
+ckbIndexerPath :: FilePath
+ckbIndexerPath = $(staticWhich "ckb-indexer")
+
 capsulePath :: FilePath
 capsulePath = $(staticWhich "capsule")
 
@@ -83,7 +86,7 @@ instance FromJSON Capacity where
 
 -- NOTE(skylar): Stored in Shannons
 newtype CKBytes =
-  CKBytes { unCKBytes :: Int }
+  CKBytes { unCKBytes :: Integer }
   deriving (Eq, Show, Ord)
 
 instance FromJSON CKBytes where
@@ -92,6 +95,12 @@ instance FromJSON CKBytes where
       Right b -> pure b
       Left _ ->
         fail "Parsing CKBytes failed"
+
+instance ToJSON CKBytes where
+  toJSON (CKBytes s) = String $ (T.pack . show $  fromIntegral s / fromIntegral ckbInShannons) <> " (CKB)"
+
+ckbInShannons :: Num a => a
+ckbInShannons = 100000000
 
 account :: Parser Account
 account = do
@@ -117,9 +126,24 @@ ckbytes = do
   n <- double
   skipMany space
   _ <- string "(CKB)"
-  pure $ CKBytes $ truncate $ n * 100000000
-  where
+  pure $ ckb n
 
+addCkb :: CKBytes -> CKBytes -> CKBytes
+addCkb (CKBytes a) (CKBytes b) = CKBytes $ a + b
+
+-- TODO just use integer
+diffCkb :: CKBytes -> CKBytes -> CKBytes
+diffCkb (CKBytes f) (CKBytes s) = CKBytes $ f - s
+
+shannons :: Integer -> CKBytes
+shannons = CKBytes
+
+-- TODO resuse logic in a single function
+ckb :: Double -> CKBytes
+ckb n = CKBytes $ truncate $ n * ckbInShannons
+
+ckbytesToDouble :: CKBytes -> Double
+ckbytesToDouble (CKBytes s) = fromIntegral s / fromIntegral ckbInShannons
 
 procCli :: MonadIO m => FilePath -> [String] -> m CreateProcess
 procCli ckbCliDir args = liftIO $ do

@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "ckb",
-  "branch": "add-default-nix",
+  "branch": "nix-v0.101.6",
   "private": false,
-  "rev": "84b456cc22b526385af57e5cc08c235537fd3b99",
-  "sha256": "1zl5mw55x9il8v0hqnfw4wf8lczlk5ccclkgy5ns6qjkpwgp91qr"
+  "rev": "17f085187c92ac6eb898065dd82ab1c1f032d261",
+  "sha256": "1l81pybs4mgpclyrgiblpnxkzz8r9gpiw056c3blzggwhl7i0v85"
 }

@@ -21,6 +21,7 @@ data Tx =
 
 data Block =
   Block { height :: Int
+        , slot :: Int
         }
   deriving (Eq, Show)
 
@@ -44,7 +45,7 @@ getBlock :: ( MonadJSM (Performable m)
             ) => Event t () -> m (Event t Block)
 getBlock start = do
   response <- performRequestAsync $ blockRequest <$ start
-  pure $ maybe (Block 0) id . decodeXhrResponse <$> response
+  pure $ maybe (Block 0 0) id . decodeXhrResponse <$> response
   where
     blockRequest = xhrRequest "GET" ("https://cardano-testnet.blockfrost.io/api/v0/blocks/latest") $ def
       & xhrRequestConfig_headers .~ "project_id" =: "testnetSZ2mfBUA7l0Ogl5QZu4jGqc0xhg1anq9"

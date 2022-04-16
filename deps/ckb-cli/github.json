@@ -1,7 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "ckb-cli",
+  "branch": "nix-v0.101.2",
   "private": false,
-  "rev": "08bf2f52d479f8adff3591009f163b298b379632",
-  "sha256": "1z64sai5a5f0cnbvh2ny8xsz576ivnr71rwamib0838limb4rwzw"
+  "rev": "432dec8a85567a893c9d90f44a0bc737bd9e71b6",
+  "sha256": "1c723j117zzv5j8asmxssv33c1cpn62i1js7iwkf03pi8j39kb32"
 }

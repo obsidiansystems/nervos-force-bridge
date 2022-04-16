@@ -1,8 +1,8 @@
 {
   "owner": "obsidiansystems",
   "repo": "capsule",
-  "branch": "explore-pass",
+  "branch": "nix-v0.7.3",
   "private": false,
-  "rev": "ab2ddeadc52b18fd72e56dc612349d98fdec8d6b",
-  "sha256": "1c1b0nw7h33dcmv1qrkhg83hic8srmljshw7kkci1qjj83556ch6"
+  "rev": "39eca37452bf411761d7e2a996f951c816d64aed",
+  "sha256": "1dkidphndlh1xg7kca9gb2922xn0pfwcdp08i5zj0qrvlvqqxyw9"
 }

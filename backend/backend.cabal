@@ -16,6 +16,7 @@ library
                , logging-effect
                , prettyprinter
                , process
+               , binary
                , directory
                , attoparsec
                , temporary
@@ -25,12 +26,25 @@ library
                , web3
                , web3-jsonrpc
                , web3-provider
+               , wai
+               , warp
                , cardano-binary
+               , basement
+               , servant
+               , servant-server
+               , servant-client
                , bytestring
                , aeson
+               , lens-aeson
+               , wreq
   exposed-modules:
     Backend
   other-modules:
+    Bridge
+    Bridge.Cardano
+    Bridge.Nervos
+
+    -- This is older proof of concept code
     CKB
     CKB.Types
     CKB.RPC
