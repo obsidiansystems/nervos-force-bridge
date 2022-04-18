@@ -12,7 +12,8 @@ import Common.Nervos hiding (tx_outputs_data) -- TODO(galen): rename this
 
 import Data.Foldable
 
-import System.IO (hClose)
+import System.IO (hClose, IOMode(..), withFile)
+import GHC.IO.Handle.FD (openFile)
 import Control.Exception(SomeException, try)
 import System.IO.Temp
 import System.Exit
@@ -267,6 +268,7 @@ addChangeOutput file (Address toAddr) ckbytes fee = do
 addInput :: BridgeM m => FilePath -> LiveCell -> m ()
 addInput file (LiveCell _ hash index) = do
   logDebug "Adding input"
+
   let
     opts = [ "tx"
            , "add-input"
@@ -280,12 +282,26 @@ addInput file (LiveCell _ hash index) = do
            , "json"
            ]
 
-  r :: Either SomeException String <- liftIO $ try $ readProcess ckbCliPath opts ""
-  case r of
-    Left err ->
-      logDebug $ "Failed to sign: " <> (T.pack . show) err
-    Right _ ->
-      logDebug "Signing complete"
+    ckbExe = RawCommand ckbCliPath opts
+
+  liftIO $ withFile "/dev/null" WriteMode $ \hDevNull ->
+      let
+        cp = CreateProcess ckbExe -- cmdspec
+                        Nothing -- cwd
+                        Nothing -- env
+                        Inherit -- std_in
+                        (UseHandle hDevNull) -- std_out
+                        (UseHandle hDevNull) -- std_err
+                        False -- close_fds
+                        False -- create_group
+                        False -- delegate_ctlc
+                        False -- detach_console
+                        False-- create_new_console
+                        False-- new_session
+                        Nothing -- child_group
+                        Nothing -- child_user
+                        False -- use_process_jobs
+      in readCreateProcess cp ""
   pure ()
 
 -- More generally, when we sign, we sign *for* a given lock arg - so to put a signature we either
