@@ -24,14 +24,54 @@ data Cell = Cell
 -- and ideally the time from this call 
 data CkbTxInfo = CkbTxInfo
   { txInfo_transaction :: Tx
+  , txInfo_tx_status :: CkbTxStatus 
   }
   deriving (Eq, Show)
 
-data Tx = Tx
-  { tx_output :: [Cell]
-  , tx_outputs_data :: [T.Text]
+-- TODO(galen): Should I add more validation on the block hash?
+-- TODO(galen): Should we track why a transaction got rejected?
+data CkbTxStatus = CkbTxStatus
+  { txStatus_block_hash :: Maybe T.Text
+  , txStatus_status :: StatusType
   }
   deriving (Eq, Show)
+
+data StatusType = Pending
+                | Proposed
+                | Committed
+                | Unknown
+                | Rejected
+                -- TODO(galen): what should we do here if rejected?
+                deriving (Eq, Show) 
+-- "pending" | "proposed" | "committed" | "unknown" | "rejected"
+
+instance FromJSON StatusType where
+  parseJSON = withText "status" $ \case
+    "pending" -> pure Pending
+    "proposed" -> pure Proposed
+    "committed" -> pure Committed
+    "unknown" -> pure Unknown
+    "rejected" -> pure Rejected
+
+instance ToJSON StatusType where
+  toJSON s = String . T.toLower . T.pack . show $ s 
+
+data Tx = Tx
+  { tx_outputs :: [Cell]
+  , tx_outputs_data :: [T.Text]
+  , tx_hash :: CkbTxHash
+  }
+  deriving (Eq, Show)
+
+newtype CkbTxHash = CkbTxHash { unCkbTxHash :: T.Text } deriving (Eq, Show)
+
+instance FromJSON CkbTxHash where
+  parseJSON = withText "hash" $ \x -> pure . CkbTxHash $ x 
+    
+instance ToJSON CkbTxHash where
+  toJSON (CkbTxHash hash) = String hash
+  
+
 
 data MintTx =
   MintTx { assocLockTxHash :: AdaTxHash
@@ -163,7 +203,7 @@ deriveJSON (scrubPrefix "cellDep_") ''CellDep
 deriveJSON (scrubPrefix "tx_") ''Tx
 deriveJSON (scrubPrefix "txInfo_") ''CkbTxInfo
 deriveJSON (scrubPrefix "cell_") ''Cell
-
+deriveJSON (scrubPrefix "txStatus_") ''CkbTxStatus
 
 
 

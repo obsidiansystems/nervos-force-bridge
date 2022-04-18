@@ -20,7 +20,7 @@ import Control.Lens
 import Data.Time
 import Data.Bool (bool)
 import qualified Data.Map as Map
-import Data.Maybe (isJust, maybe)
+import Data.Maybe (isJust, maybe, fromMaybe)
 import qualified Data.Text as T
 import Language.Javascript.JSaddle ( MonadJSM
                                    , liftJSM
@@ -58,7 +58,9 @@ import qualified Data.List.NonEmpty as NE
 import Common.Route
 import Common.Bridge
 
-import Nervos
+import qualified Common.Nervos as CKB
+import qualified Nervos as CKB
+
 import qualified Nami
 import Nami (BridgeInTx(..))
 
@@ -235,12 +237,33 @@ frontend = Frontend
             elClass "div" "mt-4" $ mdo
               elClass "div" "ml-2 font-semibold text-lg text-gray-600 mb-1" $ text "Bridge Transactions"
               txs <- Nami.readTxs
-              history <- foldDyn ($) txs $ mconcat [ (\x -> Map.insert (Nami.bridgeInTxHash x) x) <$> submitTx
+              (history :: Dynamic t (Map.Map Nami.TxHash BridgeInTx)) <- foldDyn ($) txs $ mconcat [ (\x -> Map.insert (Nami.bridgeInTxHash x) x) <$> submitTx
                                                    , updates
                                                    ]
               performEvent_ $ Nami.writeTxs <$> updated history
-              -- | I know for sure that if h-20 is set then the blue background doesnt go the whole way 
+              ----
+              let
+                exampleTxRec = CKB.TxRecord {CKB.txRecord_tx_hash = "0xf0a8bf3bdf597142ee76a0406f12affda05dd69184025d8d7e17a913e77aaf39"}
+              click <- button "click me"
+              --res <- performRequestAsync ((CKB.mkReq exampleTxRec) <$ click)
+              let
+--                res' :: Event t (Maybe (CKB.JResponse CKB.CkbTxInfo))
+--                res' = decodeXhrResponse <$> res
+                --res'' = _xhrResponse_responseText <$> res
+              res <- CKB.getAllMintTxs click
+
+              -- evSearchResults <- CKB.getTransactions click
+              -- let
+              --   x = (fmap . fmap) CKB.searchResults_objects $ evSearchResults
+
+              dynXHR <- holdDyn [] res
+              --dynXHR <- holdDyn (Nothing :: Maybe (CKB.JResponse CKB.CkbTxInfo)) res'
+              dynText (T.pack . show <$> dynXHR)
+              
               updatesMap <- elClass "div" "flex flex-col overflow-y-scroll h-44" $ do
+                -- | WE gon change history herrrr
+                -- let
+                --   historyV2 = 
                 list history (bridgeInTx cb ct)
               let
                 updates =

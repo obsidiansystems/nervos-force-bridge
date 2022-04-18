@@ -4,10 +4,15 @@
 
 module Nervos where
 
-import Language.Javascript.JSaddle ( MonadJSM )
+import Language.Javascript.JSaddle ( MonadJSM, liftJSM)
 import Reflex.Dom.Core hiding (Value)
 import Common.Nervos
+import Common.Bridge 
+import Nami 
 
+import Control.Monad ((<=<))
+import Control.Monad.Catch (MonadThrow, throwM)
+import Control.Applicative((<|>))
 import Data.ByteString (ByteString)
 
 import Data.Maybe
@@ -49,16 +54,24 @@ mkRPCRequest method params =
 
 -- Map AdaTxHash 
 
+filterUsersMints :: [AdaTxHash] -> [MintTx] -> [(MintTx, AdaTxHash)]
+filterUsersMints = undefined
+
+
+
 getAllMintTxs :: ( MonadJSM (Performable m)
+                 , MonadJSM m
                  , Monad m
                  , PerformEvent t m
                  , TriggerEvent t m
                  , DomBuilder t m
+                 , PostBuild t m
                  ) =>
-                 m (Event t [MintTx]) 
-getAllMintTxs = do
-  click <- button "click me"
-  emSearchResults <- getTransactions click 
+                 Event t () 
+              -> m (Event t [MintTx]) 
+getAllMintTxs click = do
+  emSearchResults <- getTransactions click
+  liftJSM $ clog $ T.pack "got here"
   let
 --    eTxRecords :: Event t [TxRecord]
     eTxRecords = fmap (fromMaybe [] . (fmap searchResults_objects)) emSearchResults
@@ -70,20 +83,22 @@ getAllMintTxs = do
     
     mintTxs :: Event t [MintTx]
     mintTxs =  fmap mconcat $ (fmap.fmap) ((getMints script) . txInfo_transaction)
-               $ fmap catMaybes $ (fmap . fmap) decodeXhrResponse responses
+               $ fmap catMaybes $ (fmap . fmap) decodeJRPC responses
 
   pure mintTxs
-  where   
-    mkReq :: TxRecord -> XhrRequest T.Text
-    mkReq (TxRecord hash) = postJson "http://obsidian.webhop.org:9116" $ mkRPCRequest "get_transaction" [(toJSON hash)]
+     
+mkReq :: TxRecord -> XhrRequest T.Text
+mkReq (TxRecord hash) = postJson "http://obsidian.webhop.org:9114" $ mkRPCRequest "get_transaction" [(toJSON hash)]
 
 
 
 -- | This hardcodes our lockscript in the search key
 getTransactions :: ( MonadJSM (Performable m)
+                   , MonadJSM m
                    , Monad m
                    , PerformEvent t m
-                   , TriggerEvent t m 
+                   , TriggerEvent t m
+                   , PostBuild t m 
                    ) =>
                    Event t a -- this will probably be postbuild or something
                 -> m (Event t (Maybe SearchResults))
@@ -91,11 +106,14 @@ getTransactions e = do
   let
     searchKey = SearchKey deployedSUDT Type 
     req2 :: XhrRequest T.Text
-    req2 = postJson "http://obsidian.webhop.org:9114"
+    req2 = postJson "http://obsidian.webhop.org:9116"
            $ mkRPCRequest "get_transactions" [(toJSON searchKey), (toJSON Desc), (toJSON ("0x64" :: T.Text))]
     req' = req2 <$ e
+  liftJSM $ clog $ T.pack "doing get transactions"
+  liftJSM $ clog $ T.pack . show $ req2
   (response :: Event t XhrResponse) <- performRequestAsync req'
-  pure $ decodeXhrResponse <$> response 
+--  liftJSM $ clog $ T.pack . show $ 
+  pure $ decodeJRPC <$> response 
   
  
 -- x = toStrict $ encode $ mkRPCRequest "get_transactions" [(toJSON searchKey), (toJSON Desc), (toJSON "0x64")]
@@ -126,15 +144,63 @@ getTransactionXHR :: ( MonadJSM (Performable m)
 getTransactionXHR e (TxRecord hash) = do
   let
     -- this is just cargo-culted from getTransaction in the backend
-    req = postJson "http://obsidian.webhop.org:9116"
+    req = postJson "http://obsidian.webhop.org:9114"
           $ mkRPCRequest "get_transaction" [(toJSON hash)]
 
   -- this may actually even be plural in event land
   response <- performRequestAsync (req <$ e)
-  pure $ decodeXhrResponse <$> response 
+  pure $ decodeJRPC <$> response 
+
+decodeJRPC :: FromJSON a => XhrResponse -> Maybe a
+decodeJRPC x = result <$> decodeXhrResponse x 
+
+-- data JSONRP
+
+-- I need a fromJSONRpc                     
+
+
+-- | JSON-RPC response.
+data JRPCResponse = JRPCResponse
+    { rsResult :: !(Either JRPC.RpcError Value)
+    }
+    deriving (Eq, Show)
+
+instance FromJSON JRPCResponse where
+    parseJSON =
+        withObject "JSON-RPC response object" $
+            \v -> JRPCResponse <$>
+                (Right <$> v .: "result" <|> Left <$> v .: "error")
+
+
+-- parseJSON
 
 
 
 
+-- data JResponse a = JResponse a 
 
-                    
+-- TODO(galen): is there a way to get rid of this wrapper
+data JResponse a = JResponse { result :: a } deriving (Eq, Show)
+
+instance FromJSON a => FromJSON (JResponse a) where
+  parseJSON =
+    withObject "JSON-RPC response object" $
+    \v -> JResponse <$> v .: "result"
+--          (Right <$> v .: "result" <|> Left <$> v .: "error")
+
+
+-- decodeResponse :: (MonadThrow m, FromJSON a)
+--                => ByteString
+--                -> m a
+-- decodeResponse = (tryParse . eitherDecode . encode)
+--                <=< tryResult . rsResult
+--                <=< tryParse . eitherDecode
+--   where
+--     tryParse = either (throwM . ParsingException) return
+--     tryResult = either (throwM . CallException) return
+
+
+
+-- data JsonRpcException = ParsingException String
+--     | CallException JRPC.RpcError
+--     deriving (Show, Eq)

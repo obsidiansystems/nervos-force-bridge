@@ -45,7 +45,7 @@ getMintTxsAt ckb indexer script = do
 
 -- | Helper function to pull mint information related to a script from a transaction
 getMints :: Script -> Tx -> [MintTx]
-getMints script (Tx cells outputs) = cs'
+getMints script (Tx cells outputs _) = cs'
   where
     cs = zip cells outputs
 

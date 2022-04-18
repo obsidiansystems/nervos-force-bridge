@@ -26,6 +26,7 @@ library
                , containers
                , time
                , aeson
+               , exceptions
   exposed-modules:
     Frontend
   other-modules:

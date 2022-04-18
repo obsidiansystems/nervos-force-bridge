@@ -8,7 +8,7 @@
 module Bridge.Nervos.Cli where
 
 import Common.Bridge
-import Common.Nervos hiding (tx_outputs_data) -- TODO(galen): rename this
+import Common.Nervos hiding (tx_outputs_data, tx_outputs) -- TODO(galen): rename this
 
 import Data.Foldable
 
