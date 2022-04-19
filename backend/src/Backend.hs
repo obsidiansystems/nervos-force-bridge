@@ -174,7 +174,7 @@ backend = Backend
         mSigLockArg = "0xc099a986b4c66a590b09011e3b139bf5a73e2e50"
         verifierCredentials = [ (CKB.Address "ckt1qyqw2mw2tx493vhtcf5g7rzxggldfxtvn2ksdheprt", (8119, "pass"))
                               , (CKB.Address "ckt1qyqxak478atwzfx0kqqa4sepnfqfgd7x2kesjy0v6k", (8129, "pass"))
-   --                           , (CKB.Address "ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk", (8139, "pass"))
+                              , (CKB.Address "ckt1qyq0222yxth2mtj3jmyt9uzkfxkrf4yehtjs5xvgnk", (8139, "pass"))
                               ]
         verifierAddresses = fst <$> verifierCredentials 
         deployedScript = CKB.DeployedScript CKB.deployedSUDT CKB.deployedSUDTDep
