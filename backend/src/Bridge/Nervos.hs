@@ -42,20 +42,3 @@ getMintTxsAt ckb indexer script = do
           pure []
         Right a -> do
           pure a
-
--- | Helper function to pull mint information related to a script from a transaction
-getMints :: Script -> Tx -> [MintTx]
-getMints script (Tx cells outputs _) = cs'
-  where
-    cs = zip cells outputs
-
-    cs' :: [MintTx]
-    cs' =
-      catMaybes
-      $ fmap (\(c, o) ->
-                let
-                  -- a single hex char represents a nibble (half a byte)
-                  nibblesToSplitAt = 16 * 2;
-                  (mintAmt, txHash) = T.splitAt nibblesToSplitAt o
-                in MintTx (AdaTxHash txHash) (cell_lock c)
-                    . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig mintAmt)) cs

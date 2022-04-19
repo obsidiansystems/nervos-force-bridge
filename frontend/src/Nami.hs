@@ -14,6 +14,7 @@ import Promise
 
 import Data.Time
 
+import qualified Common.Nervos as CKB
 import Common.Cardano
 import Common.Bridge 
 
@@ -106,8 +107,8 @@ mkCKBAddress t
 data BridgeInTx =
   BridgeInTx { bridgeInAmount :: Double
              , bridgeInToAddress :: CKBAddress
-             , bridgeInTxHash :: TxHash -- TODO(galen): Change to AdaTxHash newtype in Common/
-             -- , bridgeInCkbHash :: CkbTxHash
+             , bridgeInTxHash :: TxHash -- TODO(galen): Change to TxHash newtype in Common/
+             , bridgeInCkbHash :: Maybe CKB.CkbTxHash
              , bridgeInTxStatus :: Status
              , bridgeInStart :: UTCTime
              }
@@ -190,7 +191,7 @@ doPay :: (MonadJSM m) => NamiApi -> Slot -> Address -> BridgeRequest -> m (Eithe
 doPay napi slot from (BridgeRequest amount to) = do
   result <- pay napi slot (Just $ CardanoBridgeMetadata to) from testContractAddress amount
   currTime <- liftIO $ getCurrentTime
-  pure $ fmap (\txHash -> BridgeInTx amount to txHash LockSubmitted currTime) result
+  pure $ fmap (\txHash -> BridgeInTx amount to txHash Nothing LockSubmitted currTime) result
 
 -- ""transaction submit error ShelleyTxValidationError ShelleyBasedEraAlonzo (ApplyTxError [UtxowFailure (WrappedShelleyEraFailure (MissingTxMetadata (AuxiliaryDataHash {unsafeAuxiliaryDataHash = SafeHash \"0a659d32f78f4abb1a624604ba32885c64d4cf7f2ff8d75c5ea78c3f4e3a2af0\"})))])""
 -- ""(MissingTxMetadata (AuxiliaryDataHash {unsafeAuxiliaryDataHash = SafeHash \"0a659d32f78f4abb1a624604ba32885c64d4cf7f2ff8d75c5ea78c3f4e3a2af0\"})))])""

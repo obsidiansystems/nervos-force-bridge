@@ -56,14 +56,6 @@ data LockMetadata = LockMetadata
   }
   deriving (Eq, Show)
 
-instance FromJSON AdaTxHash where
-  parseJSON = withObject "TxHash" $ \o ->
-    AdaTxHash <$> o .: "tx_hash"
-
-instance ToJSON AdaTxHash where
-  toJSON (AdaTxHash h) = object [ "tx_hash" .= h
-                             ]
-
 deriveJSON defaultOptions ''LockTx
 deriveJSON defaultOptions ''AssetType
 deriveJSON defaultOptions ''LockMetadata

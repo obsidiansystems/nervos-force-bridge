@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-} 
@@ -5,6 +6,13 @@
 module Common.Nervos where
  
 import qualified Data.Text as T
+
+import Data.Binary
+import Data.Binary.Put
+import Data.Binary.Get
+
+import qualified Basement.Numerical.Number as BNN
+import Basement.Types.Word128 hiding ((-), (*))
 
 import Common.Bridge
 import Bridge.Utils
@@ -209,3 +217,50 @@ deriveJSON (scrubPrefix "txStatus_") ''CkbTxStatus
 
 
 
+
+-- | Helper function to pull mint information related to a script from a transaction
+getMints :: Script -> Tx -> [MintTx]
+getMints script (Tx cells outputs _) = cs'
+  where
+    cs = zip cells outputs
+
+    cs' :: [MintTx]
+    cs' =
+      catMaybes
+      $ fmap (\(c, o) ->
+                let
+                  -- a single hex char represents a nibble (half a byte)
+                  nibblesToSplitAt = 16 * 2;
+                  (mintAmt, txHash) = T.splitAt nibblesToSplitAt o
+                in MintTx (AdaTxHash txHash) (cell_lock c)
+                    . BNN.toInteger . unSUDTAmount <$> fromHexUtf8 (rejig mintAmt)) cs
+
+
+------------------All from SUDT.hs
+ 
+-- TODO what is this type
+newtype SUDTAmount =
+  SUDTAmount { unSUDTAmount :: Word128 }
+  deriving (Eq, Show, Num)
+
+instance Binary SUDTAmount where
+  put (SUDTAmount (Word128 ho lo) ) = do
+    putWord64le lo
+    putWord64le ho
+
+  get =
+    (\lo ho -> SUDTAmount $ Word128 ho lo) <$> getWord64le <*> getWord64le
+
+-- TODO: not this
+rejig :: T.Text -> T.Text
+rejig t
+  | t == "0x" = t
+  | lenStr < ideallen = stripped <> (LT.toStrict $ LT.take (fromIntegral $ toInteger $ ideallen - lenStr) (LT.repeat '0'))
+  | otherwise = stripped
+  where
+    lenStr = T.length stripped
+    stripped = T.drop 2 t
+    ideallen = T.length "e8030000000000000000000000000000"
+
+
+-----------------------------------

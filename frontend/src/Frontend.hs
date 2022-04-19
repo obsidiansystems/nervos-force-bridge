@@ -251,11 +251,11 @@ frontend = Frontend
 --                res' = decodeXhrResponse <$> res
                 --res'' = _xhrResponse_responseText <$> res
               res <- CKB.getAllMintTxs click
-
+              
               -- evSearchResults <- CKB.getTransactions click
               -- let
               --   x = (fmap . fmap) CKB.searchResults_objects $ evSearchResults
-
+              
               dynXHR <- holdDyn [] res
               --dynXHR <- holdDyn (Nothing :: Maybe (CKB.JResponse CKB.CkbTxInfo)) res'
               dynText (T.pack . show <$> dynXHR)
