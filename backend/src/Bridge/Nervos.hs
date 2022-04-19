@@ -42,7 +42,7 @@ getMintTxsAt ckb indexer script = do
           logDebug $ "Error: " <> (T.pack . show) err
           pure []
         Right a -> do
-          pure a
+          pure $ reverse a
 
 -- | Helper function to pull mint information related to a script from a transaction
 getMints :: Script -> Tx -> [MintTx]
