@@ -401,6 +401,6 @@ buildMintTx (Ada.LockTx _ _ _) = do
 -}
 getUnmintedLocks :: [Ada.LockTx] -> [CKB.MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
-  filter (\lt -> not $ any (comp lt) ms) ls
+  reverse $ filter (\lt -> not $ any (comp lt) ms) ls
   where
     comp (Ada.LockTx _ lscr v) (CKB.MintTx mscr v') = lscr == mscr && v == v'
