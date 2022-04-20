@@ -20,40 +20,22 @@ import Control.Lens
 import Data.Time
 import Data.Bool (bool)
 import qualified Data.Map as Map
-import Data.Maybe (isJust, maybe)
+import Data.Maybe (isJust)
 import qualified Data.Text as T
 import Language.Javascript.JSaddle ( MonadJSM
                                    , liftJSM
-                                   , toJSVal
                                    , maybeNullOrUndefined
                                    , MonadJSM
-                                   , ToJSVal
-                                   , JSVal
-                                   , JSM
                                    , jsg
                                    , js
                                    , js1
                                    )
-
-import qualified Data.Map as Map
 
 import Obelisk.Frontend
 import Obelisk.Route
 import Obelisk.Generated.Static
 
 import Reflex.Dom.Core hiding (now)
-
-import qualified Reflex.Dom.Widget.SVG as S
-import Reflex.Dom.Widget.SVG.Types (SVG_Rect)
-import qualified Reflex.Dom.Widget.SVG.Types as S
-import qualified Reflex.Dom.Widget.SVG.Types.SVG_Path as S
-import Control.Lens ((^?), (+~), (?~), (#), (^.), from, at, _Wrapped)
-import Data.Function ((&))
-import Data.Monoid (mempty, mappend)
-import Reflex (Dynamic)
-import Control.Monad.Fix (MonadFix)
-import qualified Data.List.NonEmpty as NE
-
 
 import Common.Route
 import Common.Bridge
@@ -79,6 +61,7 @@ changeBridgeDirection _ = BridgeIn
 fbSvg :: forall t m. (PostBuild t m, DomBuilder t m) => m ()
 fbSvg = elAttr "img" ("src" =: $(static "svgs/forcebridgeLogo.svg") <> "class" =: "w-svg-logo h-svg-logo") blank
 
+svgClass :: T.Text
 svgClass = "w-svg h-svg inline"
 
 nervosSvg :: (PostBuild t m, DomBuilder t m) => m ()
@@ -111,7 +94,7 @@ copyToClipboard addr = liftJSM $ do
   case mNavigator of
     Nothing -> pure ()
     Just nav -> do
-      nav ^. js ("clipboard" :: T.Text) . js1 ("writeText" :: T.Text) addr
+      _ <- nav ^. js ("clipboard" :: T.Text) . js1 ("writeText" :: T.Text) addr
       pure ()
 
   pure ()
@@ -196,9 +179,9 @@ truncateMiddleText s l
 truncateLength :: Int
 truncateLength = 20
 
-chainSvg :: (PostBuild t m, DomBuilder t m, MonadHold t m, MonadFix m) => T.Text -> m ()
-chainSvg "Nervos" = nervosSvg
+chainSvg :: (PostBuild t m, DomBuilder t m) => T.Text -> m ()
 chainSvg "Cardano" = cardanoSvg
+chainSvg _ = nervosSvg
 
 -- | Main frontend component of force-bridge
 frontend :: Frontend (R FrontendRoute)
@@ -361,7 +344,7 @@ recentTransactionsFeed newHash = mdo
   tickEv <- dyn $ ffor (null <$> hashes) $ \case
     False -> tickLossyFromPostBuildTime 10
     True -> pure never
-  tick <-switchHold never tickEv
+  tick <- switchHold never tickEv
   hashes <- foldDyn ($) [] $ leftmost [ (:) <$> newHash
                                       , tail <$ tick
                                       ]

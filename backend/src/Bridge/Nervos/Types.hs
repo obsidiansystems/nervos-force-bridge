@@ -5,8 +5,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
--- | 
-
 module Bridge.Nervos.Types where
 
 import Data.Word
@@ -20,7 +18,6 @@ import Data.Aeson.TH
 import Bridge.Utils
 
 import Data.Attoparsec.Text as A
--- import GHC.Generics
 
 data MintTx =
   MintTx { txHash :: TxHash
@@ -37,7 +34,6 @@ data HashType =
   HashTypeType | HashTypeData
   deriving (Eq, Show)
 
--- TODO Naming for everything that is json compatible
 data Script = Script
   { script_code_hash :: T.Text
   , script_hash_type :: HashType
@@ -45,7 +41,6 @@ data Script = Script
   }
   deriving (Eq, Show)
 
--- TODO what about testnet vs mainnet
 newtype Address =
   Address { unAddress :: T.Text }
   deriving (Eq, Show)
@@ -116,19 +111,17 @@ ckbInShannons = 100000000
 addCkb :: CKBytes -> CKBytes -> CKBytes
 addCkb (CKBytes a) (CKBytes b) = CKBytes $ a + b
 
--- TODO just use integer
 diffCkb :: CKBytes -> CKBytes -> CKBytes
 diffCkb (CKBytes f) (CKBytes s) = CKBytes $ f - s
 
 shannons :: Integer -> CKBytes
 shannons = CKBytes
 
--- TODO resuse logic in a single function
 ckb :: Double -> CKBytes
 ckb n = CKBytes $ truncate $ n * ckbInShannons
 
 ckbytesToDouble :: CKBytes -> Double
-ckbytesToDouble (CKBytes s) = fromIntegral s / fromIntegral ckbInShannons
+ckbytesToDouble (CKBytes s) = fromIntegral (s :: Integer) / fromIntegral (ckbInShannons :: Integer)
 
 deployedSUDT :: Script
 deployedSUDT = Script
@@ -190,8 +183,9 @@ instance ToJSON LiveCell
 
 deriveJSON (scrubPrefix "getCellsResult_") ''GetCellsResult
 deriveJSON (scrubPrefix "script_") ''Script
--- deriveJSON (scrubPrefix "liveCell_") ''LiveCell
+deriveJSON (scrubPrefix "outPoint_") ''OutPoint
 deriveJSON (scrubPrefix "liveCells_") ''LiveCells
+deriveJSON (scrubPrefix "cellDep_") ''CellDep
 
 instance FromJSON CKBytes where
   parseJSON = withText "CKBytes" $ \t -> do
@@ -201,25 +195,6 @@ instance FromJSON CKBytes where
         fail "Parsing CKBytes failed"
 
 instance ToJSON CKBytes where
-  toJSON (CKBytes s) = String $ (T.pack . show $  fromIntegral s / fromIntegral ckbInShannons) <> " (CKB)"
-
-{-
-account :: Parser Account
-account = do
-  Account
-    <$> (Address <$> mainnet)
-    <*> (TestnetAddress <$> testnet)
-    <*> addr "lock_arg"
-    <*> ((Just <$> addr "lock_hash") <|> pure Nothing)
-  where
-    addr t = do
-      _ <- A.takeTill isEndOfLine
-      endOfLine
-      skipMany space
-      _ <- string $ t <> ":"
-      skipSpace
-      takeTill isEndOfLine
-
-    mainnet = addr "mainnet"
-    testnet = addr "testnet"
--}
+  toJSON (CKBytes s) = String $ (T.pack . show
+                                 $ (fromIntegral (s :: Integer) / fromIntegral (ckbInShannons :: Integer) :: Double))
+                       <> " (CKB)"

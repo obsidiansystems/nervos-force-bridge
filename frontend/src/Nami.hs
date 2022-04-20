@@ -40,8 +40,6 @@ import Language.Javascript.JSaddle ( eval
                                    , fromJSVal
                                    , isNull
                                    , isUndefined
-                                   , obj
-                                   , (<#)
 
                                    , js
                                    , jsg
@@ -65,7 +63,6 @@ type TxBody = JSVal
 type Transaction = JSVal
 type TransactionWitnessSet = JSVal
 type TransactionHash = JSVal
--- TODO TransactionMetadata instead?
 type Metadatum = JSVal
 type UTXO = JSVal
 type Ada = Double
@@ -73,8 +70,8 @@ type Lovelace = Integer
 type V = JSVal
 
 data TransactionInput =
-  TransactionInput { sender :: Address
-                   , outputs :: [(Address, Ada)]
+  TransactionInput { sender :: !Address
+                   , outputs :: ![(Address, Ada)]
                    }
 
 data NamiError
@@ -84,8 +81,8 @@ data NamiError
   deriving (Eq, Show)
 
 data BridgeRequest =
-  BridgeRequest { bridgeRequestAmount :: Double
-                , bridgeRequestTo :: CKBAddress
+  BridgeRequest { bridgeRequestAmount :: !Double
+                , bridgeRequestTo :: !CKBAddress
                 }
 
 type TxHash = T.Text
@@ -106,11 +103,11 @@ mkCKBAddress t
     targetLen = T.length $ T.pack "ckt1qyq9u9h0egwgy73qjkz29gzkqq67fdl60r3s2egrpu"
 
 data BridgeInTx =
-  BridgeInTx { bridgeInAmount :: Double
-             , bridgeInToAddress :: CKBAddress
-             , bridgeInTxHash :: TxHash
-             , bridgeInTxStatus :: Status
-             , bridgeInStart :: UTCTime
+  BridgeInTx { bridgeInAmount :: !Double
+             , bridgeInToAddress :: !CKBAddress
+             , bridgeInTxHash :: !TxHash
+             , bridgeInTxStatus :: !Status
+             , bridgeInStart :: !UTCTime
              }
 
 deriveJSON defaultOptions ''Status
@@ -193,11 +190,9 @@ doPay napi slot from (BridgeRequest amount to) = do
   currTime <- liftIO $ getCurrentTime
   pure $ fmap (\txHash -> BridgeInTx amount to txHash LockSubmitted currTime) result
 
--- ""transaction submit error ShelleyTxValidationError ShelleyBasedEraAlonzo (ApplyTxError [UtxowFailure (WrappedShelleyEraFailure (MissingTxMetadata (AuxiliaryDataHash {unsafeAuxiliaryDataHash = SafeHash \"0a659d32f78f4abb1a624604ba32885c64d4cf7f2ff8d75c5ea78c3f4e3a2af0\"})))])""
--- ""(MissingTxMetadata (AuxiliaryDataHash {unsafeAuxiliaryDataHash = SafeHash \"0a659d32f78f4abb1a624604ba32885c64d4cf7f2ff8d75c5ea78c3f4e3a2af0\"})))])""
--- TODO: this Maybe a causes type issues I think...
+
 pay :: (MonadJSM m, ToJSON a) => NamiApi -> Slot -> Maybe a -> Address -> Address -> Ada -> m (Either NamiError TxHash)
-pay napi slot mdatum _ to ada = liftJSM $ do
+pay napi _ mdatum _ to ada = liftJSM $ do
   tbuild <- newTransactionBuilder
   clog tbuild
 
@@ -208,8 +203,6 @@ pay napi slot mdatum _ to ada = liftJSM $ do
   output <- newTransactionOutput to ada
   _ <- tbuild ^. js1 "add_output" output
 
-  -- let
-  -- _ <- tbuild ^. js1 "set_ttl" (slot + 10000)
 
   changeAddress <- getChangeAddress napi
   case changeAddress of
@@ -219,31 +212,7 @@ pay napi slot mdatum _ to ada = liftJSM $ do
 
       emptyWitnesses <- cardanoWasm ^. js "TransactionWitnessSet" . js0 "new"
       moba <- case mdatum of
-        Nothing -> pure Nothing -- jsUndefined
-        Just datum -> do
-          md <- encodeToMetadatum datum
-          gm <- cardanoWasm ^. js "GeneralTransactionMetadata" . js0 "new"
-          quo <- newBigNum "321"
-          _ <- gm ^. js2 "insert" quo md
-          ad <- cardanoWasm ^. js "AuxiliaryData" . js0 "new"
-          _ <- ad ^. js1 "set_metadata" gm
-          clog "The metadata is: "
-          md' <- ad ^. js0 "metadata"
-          clog md
-          tbuild ^. js1 "set_auxiliary_data" ad
-
-          -- _ <- tbody ^. js1 "set_auxiliary_data_hash" mdhash
-          pure $ Just ad
-      _ <- tbuild ^. js1 "add_change_if_needed" notBech
-      tbody <- tbuild ^. js0 "build"
-      case moba of
-        Nothing -> pure ()
-        Just ad -> do
-          mdhash <- cardanoWasm ^. js1 "hash_auxiliary_data" ad
-          _ <- tbody ^. js1 "set_auxiliary_data_hash" mdhash
-          pure ()
-{-      meta <- case mdatum of
-        Nothing -> pure jsUndefined
+        Nothing -> pure Nothing
         Just datum -> do
           md <- encodeToMetadatum datum
           gm <- cardanoWasm ^. js "GeneralTransactionMetadata" . js0 "new"
@@ -254,10 +223,18 @@ pay napi slot mdatum _ to ada = liftJSM $ do
           clog "The metadata is: "
           md' <- ad ^. js0 "metadata"
           clog md'
+          _ <- tbuild ^. js1 "set_auxiliary_data" ad
+
+          pure $ Just ad
+      _ <- tbuild ^. js1 "add_change_if_needed" notBech
+      tbody <- tbuild ^. js0 "build"
+      case moba of
+        Nothing -> pure ()
+        Just ad -> do
           mdhash <- cardanoWasm ^. js1 "hash_auxiliary_data" ad
           _ <- tbody ^. js1 "set_auxiliary_data_hash" mdhash
-          pure ad
--}
+          pure ()
+
       let meta = maybe jsUndefined id moba
 
       bytes <- meta ^. js0 "to_bytes"
@@ -282,8 +259,6 @@ pay napi slot mdatum _ to ada = liftJSM $ do
   where
     lovelace = toLovelace ada
 
--- TODO: this isn't really correct, we have an auxiliary datum and we need to
--- make sure things are put together properly and support "undefined"
 type AuxiliaryData = JSVal
 
 transactionCbor :: (MonadJSM m) => TxBody -> TransactionWitnessSet -> JSVal -> m Transaction
@@ -321,17 +296,10 @@ submitTx napi txn = liftJSM $ do
     handleBad err = do
       clog err
       pure err
-      -- pure $ Left "Oh no"
 
     handleGud mTx = do
       clog mTx
       pure mTx
-  {-
-  promiseMaybe (unsafeToPromise promise) $ \mTx -> do
-    clog mTx
-    pure mTx
--}
-
 
 addInput :: MonadJSM m => TransactionBuilder -> UTXO -> m ()
 addInput tb utxo = liftJSM $ do

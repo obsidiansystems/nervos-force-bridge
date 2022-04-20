@@ -19,27 +19,35 @@ import qualified Data.Text as T
 import Bridge.Nervos.Types
 import Bridge.Utils
 
+ckbIndexerProvider :: Provider
+ckbIndexerProvider =
+  HttpProvider "http://obsidian.webhop.org:9116"
+
+ckbProvider :: Provider
+ckbProvider =
+  HttpProvider "http://obsidian.webhop.org:9114"
+
 data Cell = Cell
-  { cell_capacity :: T.Text
-  , cell_lock :: Script
-  , cell_type :: Maybe Script
+  { cell_capacity :: !T.Text
+  , cell_lock :: !Script
+  , cell_type :: !(Maybe Script)
   }
   deriving (Eq, Show)
 
 data TxInfo = TxInfo
-  { txInfo_transaction :: Tx
+  { txInfo_transaction :: !Tx
   }
   deriving (Eq, Show)
 
 data Tx = Tx
-  { tx_outputs :: [Cell]
-  , tx_outputs_data :: [T.Text]
+  { tx_outputs :: ![Cell]
+  , tx_outputs_data :: ![T.Text]
   }
   deriving (Eq, Show)
 
 data SearchResults = SearchResults
-  { searchResults_last_cursor :: T.Text
-  , searchResults_objects :: [TxRecord]
+  { searchResults_last_cursor :: !T.Text
+  , searchResults_objects :: ![TxRecord]
   }
   deriving (Eq, Show)
 
@@ -58,13 +66,12 @@ instance FromJSON ScriptType where
     t -> fail $ "Invalid Script Type: " <> T.unpack t
 
 data SearchKey = SearchKey
-  { searchKey_script :: Script
-  , searchKey_script_type :: ScriptType
-  -- TODO Do we want a filter?
+  { searchKey_script :: !Script
+  , searchKey_script_type :: !ScriptType
   }
 
 data TxRecord = TxRecord
-  { txRecord_tx_hash :: T.Text
+  { txRecord_tx_hash :: !T.Text
   }
   deriving (Eq, Show)
 
@@ -89,13 +96,6 @@ deriveJSON (scrubPrefix "tx_") ''Tx
 deriveJSON (scrubPrefix "txInfo_") ''TxInfo
 deriveJSON (scrubPrefix "cell_") ''Cell
 
-{-deriveJSON (scrubPrefix "txRecord_") ''TxRecord
-deriveJSON (scrubPrefix "searchKey_") ''SearchKey
-
-deriveJSON (scrubPrefix "searchResults_") ''Searc
--}
-
--- TODO these aren't actually different...
 runIndexer :: MonadIO m => Provider -> Web3 a -> m (Either Web3Error a)
 runIndexer p =
   liftIO . runWeb3' p
@@ -107,7 +107,6 @@ runCkb p =
 getTransactions :: JsonRpc m => SearchKey -> Order -> T.Text -> m SearchResults
 getTransactions = remote "get_transactions"
 
--- TODO How to make this work with a custom type? Custom json instance??
 getTransaction :: JsonRpc m => T.Text -> m TxInfo
 getTransaction = remote "get_transaction"
 

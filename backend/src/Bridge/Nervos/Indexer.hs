@@ -20,8 +20,8 @@ import Bridge.Nervos.Types
 import Bridge.Utils
 
 data SearchResults = SearchResults
-  { searchResults_last_cursor :: T.Text
-  , searchResults_objects :: [TxRecord]
+  { searchResults_last_cursor :: !T.Text
+  , searchResults_objects :: ![TxRecord]
   }
   deriving (Eq, Show)
 
@@ -40,13 +40,12 @@ instance FromJSON ScriptType where
     t -> fail $ "Invalid Script Type: " <> T.unpack t
 
 data SearchKey = SearchKey
-  { searchKey_script :: Script
-  , searchKey_script_type :: ScriptType
-  -- TODO Do we want a filter?
+  { searchKey_script :: !Script
+  , searchKey_script_type :: !ScriptType
   }
 
 data TxRecord = TxRecord
-  { txRecord_tx_hash :: T.Text
+  { txRecord_tx_hash :: !T.Text
   }
   deriving (Eq, Show)
 

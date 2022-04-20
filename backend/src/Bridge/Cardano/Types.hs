@@ -16,10 +16,8 @@ import qualified Data.Text as T
 import Data.Aeson
 import Data.Aeson.TH
 
-import Bridge.Utils
 import qualified Bridge.Nervos.Types as CKB
 
--- TODO(skylar): This is a testnet address
 newtype Address =
   Address { unAddress :: T.Text }
   deriving (Eq, Show)
@@ -28,27 +26,26 @@ newtype TxHash =
   TxHash { unTxHash :: T.Text }
   deriving (Eq, Show)
 
--- TODO(skylar): Steal this from cardano
 data AssetType
   = Ada
   | AssetName T.Text
   deriving (Eq, Show, Read, Ord, Generic)
 
 data TxOutput = TxOutput
-  { txOutput_address :: T.Text
-  , txOutput_amount :: Map AssetType Integer
+  { txOutput_address :: !T.Text
+  , txOutput_amount :: !(Map AssetType Integer)
   }
   deriving (Eq, Show, Generic)
 
 data LockTx =
-  LockTx { lockTxHash :: TxHash
-         , lockTxLockScript :: CKB.Script
-         , lockTxLovelace :: Integer
+  LockTx { lockTxHash :: !TxHash
+         , lockTxLockScript :: !CKB.Script
+         , lockTxLovelace :: !Integer
          }
   deriving (Eq, Show)
 
 data LockMetadata = LockMetadata
-  { mintToAddress :: T.Text
+  { mintToAddress :: !T.Text
   }
   deriving (Eq, Show)
 
