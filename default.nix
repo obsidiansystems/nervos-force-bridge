@@ -41,7 +41,6 @@ in with pkgs.haskell.lib; {
     web3 = sources.hs-web3 + "/packages/web3";
     web3-bignum = sources.hs-web3 + "/packages/bignum";
     web3-crypto = sources.hs-web3 + "/packages/crypto";
-    # TODO: Make Types from this package usable from ghcjs; currently unbuildable in ghcjs as it pulls in web3-jsonrpc
     web3-ethereum = sources.hs-web3 + "/packages/ethereum";
     # fork buildable in ghcjs of Types extracted from web3-ethereum
     web3-ethereum-core = sources.hs-web3 + "/packages/ethereum-core";
@@ -61,7 +60,6 @@ in with pkgs.haskell.lib; {
         reflex-dom-svg = haskellLib.doJailbreak (haskellLib.markUnbroken (super.reflex-dom-svg));
         map-syntax = haskellLib.doJailbreak super.map-syntax;
         xmlhtml = haskellLib.doJailbreak super.xmlhtml;
-        # TODO: upstream
         hspec-webdriver = self.callCabal2nix "hspec-webdriver" sources.hspec-webdriver-clone {};
         websockets = haskellLib.doJailbreak (self.callHackage "websockets" "0.12.7.2" {});
         patch = haskellLib.doJailbreak super.patch;

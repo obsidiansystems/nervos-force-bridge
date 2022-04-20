@@ -18,7 +18,7 @@ newtype CKBAddress =
   deriving (Eq, Show)
 
 data CardanoBridgeMetadata = CardanoBridgeMetadata
-   { mintToAddress :: CKBAddress
+   { mintToAddress :: !CKBAddress
    }
    deriving (Eq, Show)
 

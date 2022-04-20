@@ -8,18 +8,12 @@ module Bridge.Nervos.SUDT where
 import Data.Binary
 import Data.Binary.Put
 import Data.Binary.Get
-import Data.HexString
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Encoding as T
-
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 
 import Basement.Types.Word128 hiding ((-))
 
--- TODO what is this type
 newtype SUDTAmount =
   SUDTAmount { unSUDTAmount :: Word128 }
   deriving (Eq, Show, Num)
@@ -32,7 +26,6 @@ instance Binary SUDTAmount where
   get =
     (\lo ho -> SUDTAmount $ Word128 ho lo) <$> getWord64le <*> getWord64le
 
--- TODO: not this
 rejig :: T.Text -> T.Text
 rejig t
   | t == "0x" = t

@@ -8,14 +8,11 @@
 
 module Bridge.Nervos where
 
-import Data.Aeson
-import Data.Aeson.TH
 import qualified Data.Text as T
 import Data.Traversable
 import Bridge.Utils
 
 import Bridge.Nervos.Types
--- TODO delete indexer keep RPC
 import Bridge.Nervos.RPC
 import Network.Web3.Provider (Provider)
 
@@ -24,16 +21,15 @@ import qualified Basement.Numerical.Number as BNN
 
 import Bridge.Nervos.SUDT
 
--- TODO How much do we care about signaling failure here?
 getMintTxsAt :: BridgeM m => Provider -> Provider -> Script -> m [MintTx]
-getMintTxsAt ckb indexer script = do
+getMintTxsAt ckbProv indexer script = do
   result <- runIndexer indexer $ getTransactions (SearchKey script Type) Desc "0x64"
   case result of
     Left err -> do
       logDebug $ "Error: " <> (T.pack . show) err
       pure []
     Right searchresults -> do
-      allMints <- runCkb ckb $ do
+      allMints <- runCkb ckbProv $ do
         fmap mconcat <$> for (searchResults_objects searchresults) $ \thing -> do
           t <- getTransaction . txRecord_tx_hash $ thing
           pure $ getMints script $ txInfo_transaction t
@@ -46,7 +42,7 @@ getMintTxsAt ckb indexer script = do
 
 -- | Helper function to pull mint information related to a script from a transaction
 getMints :: Script -> Tx -> [MintTx]
-getMints script (Tx cells outputs) = cs'
+getMints _ (Tx cells outputs) = cs'
   where
     cs = zip cells outputs
 

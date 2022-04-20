@@ -57,12 +57,6 @@ library
     Bridge.Nervos.SUDT
     Bridge.Nervos.Types
     Bridge.Utils
-    CKB
-    CKB.Capsule 
-    CKB.Config
-    CKB.RPC
-    CKB.Types
-    CKB.Utils
 
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
 
