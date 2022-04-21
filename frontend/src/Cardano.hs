@@ -14,14 +14,14 @@ import Data.Aeson
 import Data.Aeson.TH
 
 data Tx =
-  Tx { hash :: T.Text
-     , block_height :: Int
+  Tx { hash :: !T.Text
+     , block_height :: !Int
      }
   deriving (Eq, Show)
 
 data Block =
-  Block { height :: Int
-        , slot :: Int
+  Block { height :: !Int
+        , slot :: !Int
         }
   deriving (Eq, Show)
 

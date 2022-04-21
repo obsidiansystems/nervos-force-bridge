@@ -11,13 +11,11 @@ in self: super: {
     buildTools = [pkgs.pkg-config];
   });
 
-  # TODO: upstream to reflex-platform ghc810 branch
   network = haskellLib.overrideCabal super.network (drv: {
     doCheck = false;
     # avoid custom Setup.hs which has trouble configuring the pkg
     preCompileBuildDriver = "rm Setup.hs";
     preConfigure = "./configure";
-    # TODO: correctly include generated HsNetworkConfig.h in pkg lib dir
     preFixup = ''
       cp include/HsNetworkConfig.* $prefix/lib/ghcjs-8.10.7/js-ghcjs-ghcjs-8.10.7-ghc8_10_7/network-3.1.2.1-Bq1IGsPSGY2B7ccccStsE/include/
     '';
