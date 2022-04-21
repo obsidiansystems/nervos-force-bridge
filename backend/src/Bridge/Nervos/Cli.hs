@@ -319,6 +319,20 @@ signTxFile file (Address addr) pass = do
   result <- liftIO $ readCreateProcess cp (T.unpack pass)
   pure ()
 
+
+buildBurnTxn :: BridgeM m =>
+                Address
+             -> Script
+             -> MultiSigConfigs
+             -> DeployedScript
+             -> Int
+             -> m FilePath
+buildBurnTxn addr script msconfig (DeployedScript sudt sudtDep) lovelace = do
+  (fname, handle) <- liftIO $ openTempFile "." "burn.json"
+  liftIO $ hClose handle
+  logDebug $ "Building a burn" <> T.pack fname
+  undefined
+
 buildMintTxn :: BridgeM m =>
                 Address
              -> Script

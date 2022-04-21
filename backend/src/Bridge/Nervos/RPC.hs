@@ -60,7 +60,11 @@ instance FromJSON ScriptType where
 data SearchKey = SearchKey
   { searchKey_script :: Script
   , searchKey_script_type :: ScriptType
-  -- TODO Do we want a filter?
+  }
+
+data FilteredSearch = FilteredSearch
+  { filteredSearch_searchKey :: SearchKey
+    filteredSearch_filters :: [SearchKey]
   }
 
 data TxRecord = TxRecord
