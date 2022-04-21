@@ -111,6 +111,12 @@ runCkb p =
 getTransactions :: JsonRpc m => SearchKey -> Order -> T.Text -> m SearchResults
 getTransactions = remote "get_transactions"
 
+getTransactions' :: JsonRpc m => FilteredSearch 
+                              -> Order 
+                              -> T.Text 
+                              -> m SearchResults
+getTransactions' = remote "get_transactions"
+ 
 -- TODO How to make this work with a custom type? Custom json instance??
 getTransaction :: JsonRpc m => T.Text -> m TxInfo
 getTransaction = remote "get_transaction"
