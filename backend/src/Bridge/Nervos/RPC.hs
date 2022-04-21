@@ -64,7 +64,7 @@ data SearchKey = SearchKey
 
 data FilteredSearch = FilteredSearch
   { filteredSearch_searchKey :: SearchKey
-    filteredSearch_filters :: [SearchKey]
+  , filteredSearch_filters :: [SearchKey]
   }
 
 data TxRecord = TxRecord
@@ -87,6 +87,7 @@ instance FromJSON Order where
 
 
 deriveJSON (scrubPrefix "txRecord_") ''TxRecord
+deriveJSON (scrubPrefix "filteredSearch_") ''FilteredSearch
 deriveJSON (scrubPrefix "searchKey_") ''SearchKey
 deriveJSON (scrubPrefix "searchResults_") ''SearchResults
 deriveJSON (scrubPrefix "tx_") ''Tx

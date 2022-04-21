@@ -25,9 +25,14 @@ import qualified Basement.Numerical.Number as BNN
 import Bridge.Nervos.SUDT
 
 -- TODO How much do we care about signaling failure here?
-getMintTxsAt :: BridgeM m => Provider -> Provider -> Script -> m [MintTx]
-getMintTxsAt ckb indexer script = do
-  result <- runIndexer indexer $ getTransactions (SearchKey script Type) Desc "0x64"
+-- TODO change
+getMintTxsAt :: BridgeM m => Provider -> Provider -> Script -> Maybe Script -> m [MintTx]
+getMintTxsAt ckb indexer script lockscript = do
+  searchData <- return $ case lockscript of
+	    Nothing -> getTransactions (SearchKey script Type) Desc "0x64"
+            Just lock -> getTransactions' (FilteredSearch (SearchKey lock Lock) [(SearchKey script Type)]) Desc "0x64"
+	
+  result <- runIndexer indexer searchData
   case result of
     Left err -> do
       logDebug $ "Error: " <> (T.pack . show) err
