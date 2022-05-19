@@ -60,7 +60,11 @@ instance FromJSON ScriptType where
 data SearchKey = SearchKey
   { searchKey_script :: Script
   , searchKey_script_type :: ScriptType
-  -- TODO Do we want a filter?
+  }
+
+data FilteredSearch = FilteredSearch
+  { filteredSearch_searchKey :: SearchKey
+  , filteredSearch_filters :: [SearchKey]
   }
 
 data TxRecord = TxRecord
@@ -83,6 +87,7 @@ instance FromJSON Order where
 
 
 deriveJSON (scrubPrefix "txRecord_") ''TxRecord
+deriveJSON (scrubPrefix "filteredSearch_") ''FilteredSearch
 deriveJSON (scrubPrefix "searchKey_") ''SearchKey
 deriveJSON (scrubPrefix "searchResults_") ''SearchResults
 deriveJSON (scrubPrefix "tx_") ''Tx
@@ -107,6 +112,12 @@ runCkb p =
 getTransactions :: JsonRpc m => SearchKey -> Order -> T.Text -> m SearchResults
 getTransactions = remote "get_transactions"
 
+getTransactions' :: JsonRpc m => FilteredSearch 
+                              -> Order 
+                              -> T.Text 
+                              -> m SearchResults
+getTransactions' = remote "get_transactions"
+ 
 -- TODO How to make this work with a custom type? Custom json instance??
 getTransaction :: JsonRpc m => T.Text -> m TxInfo
 getTransaction = remote "get_transaction"

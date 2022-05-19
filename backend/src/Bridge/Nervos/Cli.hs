@@ -38,6 +38,7 @@ import qualified Bridge.Cardano.Types as Ada
 -- import qualified Bridge.Cardano as Ada
 import Bridge.Nervos.Types
 import Bridge.Nervos.SUDT
+import Bridge.Nervos (getMintTxsAt)
 
 -- TODO(skylar): We aren't really using cli for these calls,
 -- we just import this to make it work for now
@@ -193,6 +194,10 @@ ckbIndexerProvider :: Provider
 ckbIndexerProvider =
   HttpProvider "http://obsidian.webhop.org:9116"
 
+ckbNodeProvider :: Provider
+ckbNodeProvider =
+  HttpProvider "http://obsidian.webhop.org:9114"
+
 getLiveCells :: BridgeM m => Script -> m [LiveCell]
 getLiveCells scr = do
   {-
@@ -318,6 +323,22 @@ signTxFile file (Address addr) pass = do
   cp <- procCli (relativeCkbHome "ckb") opts
   result <- liftIO $ readCreateProcess cp (T.unpack pass)
   pure ()
+
+
+buildBurnTxn :: BridgeM m =>
+                Address
+             -> Script
+             -> Script
+             -> MultiSigConfigs
+             -> Int
+             -> m FilePath
+buildBurnTxn addr typescript lockscript msconfig lovelace = do
+  (fname, handle) <- liftIO $ openTempFile "." "burn.json"
+  liftIO $ hClose handle
+  logDebug $ "Building a burn" <> T.pack fname
+  mints <- getMintTxsAt ckbNodeProvider ckbIndexerProvider typescript (Just lockscript)
+  
+  undefined
 
 buildMintTxn :: BridgeM m =>
                 Address

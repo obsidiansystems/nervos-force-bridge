@@ -151,7 +151,7 @@ handleSignatureRequest :: VerifierConfig -> Request -> Servant.Handler Response
 handleSignatureRequest vc (Request lockTx) = liftIO $ do
   runBridgeInFile ("verifier" <>  show (verifierConfigPort vc) <> ".log") $ do
     locks <- Ada.getLockTxsAt apiKey $ verifierCardanoAddress vc
-    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer (CKB.deployedScriptScript deployedScript) Nothing
     let
       foundLock = isJust $ headMay $ filter (== lockTx) $ getUnmintedLocks locks mints
 
@@ -285,7 +285,7 @@ runCollector cc = forever $ do
   runBridgeInFile "collector.log" $ do
     locks <- Ada.getLockTxsAt apiKey $ collectorCardanoAddress cc
     logDebug $ "Got lock txns"
-    mints <- CKB.getMintTxsAt ckb indexer $ CKB.deployedScriptScript deployedScript
+    mints <- CKB.getMintTxsAt ckb indexer (CKB.deployedScriptScript deployedScript) Nothing
     logDebug $ "Got mints"
 
     let unMinted = getUnmintedLocks locks mints
@@ -403,4 +403,4 @@ getUnmintedLocks :: [Ada.LockTx] -> [CKB.MintTx] -> [Ada.LockTx]
 getUnmintedLocks ls ms =
   filter (\lt -> not $ any (comp lt) ms) ls
   where
-    comp (Ada.LockTx _ lscr v) (CKB.MintTx mscr v') = lscr == mscr && v == v'
+    comp (Ada.LockTx _ lscr v) (CKB.MintTx mscr v' _) = lscr == mscr && v == v'

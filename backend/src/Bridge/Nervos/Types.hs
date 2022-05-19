@@ -26,7 +26,7 @@ import Data.Attoparsec.Text as A
 data MintTx =
   MintTx { mintTo :: Script
          , mintAmount :: Integer
-         }
+         , mintTxHash :: T.Text }
   deriving (Eq, Show)
 
 newtype CKBytes =
